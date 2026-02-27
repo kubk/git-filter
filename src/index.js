@@ -8,7 +8,7 @@ const ignore = require('ignore')
 const writeFileAtomic = require('write-file-atomic')
 
 const { Command } = require('commander')
-const packageJson = require(path.join(__dirname, './package.json'))
+const packageJson = require(path.join(__dirname, '../package.json'))
 
 let DEBUG = false
 

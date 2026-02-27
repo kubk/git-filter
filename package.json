@@ -2,7 +2,7 @@
   "name": "git-filter",
   "version": "2.0.1",
   "description": "Create a filtered copy of a git repo with full commit history preserved",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "test": "vitest run"
   },
@@ -11,7 +11,7 @@
   "license": "MIT",
   "private": false,
   "bin": {
-    "git-filter": "./index.js"
+    "git-filter": "./src/index.js"
   },
   "dependencies": {
     "commander": "^8.3.0",

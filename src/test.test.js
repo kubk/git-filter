@@ -168,7 +168,7 @@ test('gitexporter save git history', async () => {
     await run(`rm -rf ${folder}*`)
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config)
-    await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+    await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
 
     expectLogPath(
         `${folder}-target.log.json`,
@@ -198,7 +198,7 @@ test('gitexporter allowed paths', async () => {
     await run(`rm -rf ${folder}*`)
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config)
-    await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+    await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
 
     await run(`ls -a ${folder}-target | LC_ALL=C sort`, ['.', '..', '.git', 'Test.txt'])
 
@@ -279,7 +279,7 @@ test('gitexporter ignored paths', async () => {
     await run(`rm -rf ${folder}*`)
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config)
-    await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+    await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
 
     await run(`ls -a ${folder}-target | LC_ALL=C sort`, ['.', '..', '.git', 'Test.txt.link', 'bin', 'sTest.txt'])
 
@@ -359,7 +359,7 @@ test('gitexporter ignored and allowed paths', async () => {
     await run(`rm -rf ${folder}*`)
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config)
-    await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+    await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
 
     await run(`ls -a ${folder}-target | LC_ALL=C sort`, ['.', '..', '.git', 'bin'])
 
@@ -444,7 +444,7 @@ test('gitexporter follow by logfile', async () => {
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config)
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Finish', 'Checkout: 46c01f27346ad1e77ffcc81e38b914ea17ae0395'],
         ['Follow target repo state', 'Follow log stopped'],
     )
@@ -463,7 +463,7 @@ test('gitexporter follow by logfile', async () => {
     await addGitRepoCommit(folder, 'some-file.txt', 'hollo world!', 6, 'add hollo')
 
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Finish', 'Follow target repo state by log file: 6 commits', 'Follow log stopped! last commit 7/7 46c01f27346ad1e77ffcc81e38b914ea17ae0395', 'Checkout: 95655d5bd61e5d8c71acde522f28c0d46fb17330'],
     )
     expectLogPath(
@@ -478,15 +478,15 @@ test('gitexporter follow by logfile', async () => {
     )
 
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Finish', 'Follow target repo state by log file: 7 commits', 'Follow log stopped! last commit 7 95655d5bd61e5d8c71acde522f28c0d46fb17330', 'Checkout: 95655d5bd61e5d8c71acde522f28c0d46fb17330'],
     )
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Finish', 'Follow target repo state by log file: 7 commits', 'Follow log stopped! last commit 7 95655d5bd61e5d8c71acde522f28c0d46fb17330', 'Checkout: 95655d5bd61e5d8c71acde522f28c0d46fb17330'],
     )
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Finish', 'Follow target repo state by log file: 7 commits', 'Follow log stopped! last commit 7 95655d5bd61e5d8c71acde522f28c0d46fb17330', 'Checkout: 95655d5bd61e5d8c71acde522f28c0d46fb17330'],
     )
 
@@ -586,7 +586,7 @@ test('gitexporter follow by number of commits', async () => {
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config)
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Finish', 'Checkout: 46c01f27346ad1e77ffcc81e38b914ea17ae0395'],
         ['WARN', 'Follow target repo state', 'Follow log stopped'],
     )
@@ -605,7 +605,7 @@ test('gitexporter follow by number of commits', async () => {
     await addGitRepoCommit(folder, 'some-file.txt', 'hollo world!', 6, 'add hollo')
 
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Finish', 'Follow target repo state by number of commits: 6 commits', 'Follow log stopped! last commit 7/7 46c01f27346ad1e77ffcc81e38b914ea17ae0395', 'Checkout: 95655d5bd61e5d8c71acde522f28c0d46fb17330'],
         ['WARN'],
     )
@@ -621,17 +621,17 @@ test('gitexporter follow by number of commits', async () => {
     )
 
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Finish', 'Follow target repo state by number of commits: 7 commits', 'Follow log stopped! last commit 7 95655d5bd61e5d8c71acde522f28c0d46fb17330', 'Checkout: 95655d5bd61e5d8c71acde522f28c0d46fb17330'],
         ['WARN'],
     )
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Finish', 'Follow target repo state by number of commits: 7 commits', 'Follow log stopped! last commit 7 95655d5bd61e5d8c71acde522f28c0d46fb17330', 'Checkout: 95655d5bd61e5d8c71acde522f28c0d46fb17330'],
         ['WARN'],
     )
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Finish', 'Follow target repo state by number of commits: 7 commits', 'Follow log stopped! last commit 7 95655d5bd61e5d8c71acde522f28c0d46fb17330', 'Checkout: 95655d5bd61e5d8c71acde522f28c0d46fb17330'],
         ['WARN'],
     )
@@ -735,7 +735,7 @@ test('gitexporter commitTransformer', async () => {
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config)
     await writeFileAtomic(`${folder}.transformer.js`, transformer)
-    await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+    await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
 
     await run(`git -C ${folder}-target log -p`, [
         'commit a5eb28f672bd8c801088c16da026d3cef8c2c5dd',
@@ -825,7 +825,7 @@ test('gitexporter followByLogFile syncAllFilesOnLastFollowCommit: true', async (
     await run(`rm -rf ${folder}*`)
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config1)
-    await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+    await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
 
     const config2 = `{
   "forceReCreateRepo": false,
@@ -838,7 +838,7 @@ test('gitexporter followByLogFile syncAllFilesOnLastFollowCommit: true', async (
     await writeFileAtomic(`${folder}.config.json`, config2)
     await addGitRepoCommit(folder, 'some-file.txt', 'hollo world!', 6, 'add hollo')
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Finish', 'Follow target repo state by log file: 6 commits', 'Follow log stopped! last commit 7/7 449f22bdf5add1e83d1a30d50afa924c23cbe5ac'],
     )
 
@@ -921,7 +921,7 @@ test('gitexporter followByLogFile syncAllFilesOnLastFollowCommit: true; delete o
     await run(`rm -rf ${folder}*`)
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config1)
-    await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+    await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
 
     const config2 = `{
   "forceReCreateRepo": false,
@@ -935,7 +935,7 @@ test('gitexporter followByLogFile syncAllFilesOnLastFollowCommit: true; delete o
     await writeFileAtomic(`${folder}.config.json`, config2)
     await addGitRepoCommit(folder, 'some-file.txt', 'hollo world!', 6, 'add hollo')
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Finish', 'Follow target repo state by log file: 6 commits', 'Follow log stopped! last commit 7/7 449f22bdf5add1e83d1a30d50afa924c23cbe5ac'],
         ['Follow target repo state by number of commits'],
     )
@@ -1027,7 +1027,7 @@ test('gitexporter followByLogFile syncAllFilesOnLastFollowCommit: false', async 
     await run(`rm -rf ${folder}*`)
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config1)
-    await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+    await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
 
     const config2 = `{
   "forceReCreateRepo": false,
@@ -1040,7 +1040,7 @@ test('gitexporter followByLogFile syncAllFilesOnLastFollowCommit: false', async 
     await writeFileAtomic(`${folder}.config.json`, config2)
     await addGitRepoCommit(folder, 'some-file.txt', 'hollo world!', 6, 'add hollo')
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Finish', 'Follow target repo state by log file: 6 commits', 'Follow log stopped! last commit 7/7 449f22bdf5add1e83d1a30d50afa924c23cbe5ac'],
     )
 
@@ -1116,7 +1116,7 @@ test('gitexporter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true',
     await run(`rm -rf ${folder}*`)
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config1)
-    await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+    await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
 
     const config2 = `{
   "forceReCreateRepo": false,
@@ -1130,7 +1130,7 @@ test('gitexporter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true',
     await writeFileAtomic(`${folder}.config.json`, config2)
     await addGitRepoCommit(folder, 'some-file.txt', 'hollo world!', 6, 'add hollo')
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Finish', 'Follow target repo state by number of commits: 6 commits', 'Follow log stopped! last commit 7/7 449f22bdf5add1e83d1a30d50afa924c23cbe5ac'],
     )
 
@@ -1214,7 +1214,7 @@ test('gitexporter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true; 
     await run(`rm -rf ${folder}*`)
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config1)
-    await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+    await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
 
     const config2 = `{
   "forceReCreateRepo": false,
@@ -1229,7 +1229,7 @@ test('gitexporter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true; 
     await writeFileAtomic(`${folder}.config.json`, config2)
     await addGitRepoCommit(folder, 'some-file.txt', 'hollo world!', 6, 'add hollo')
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Finish', 'Follow target repo state by number of commits: 6 commits', 'Follow log stopped! last commit 7/7 449f22bdf5add1e83d1a30d50afa924c23cbe5ac'],
         ['Follow target repo state by log file'],
     )
@@ -1321,7 +1321,7 @@ test('gitexporter followByNumberOfCommits syncAllFilesOnLastFollowCommit: false'
     await run(`rm -rf ${folder}*`)
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config1)
-    await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+    await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
 
     const config2 = `{
   "forceReCreateRepo": false,
@@ -1334,7 +1334,7 @@ test('gitexporter followByNumberOfCommits syncAllFilesOnLastFollowCommit: false'
     await writeFileAtomic(`${folder}.config.json`, config2)
     await addGitRepoCommit(folder, 'some-file.txt', 'hollo world!', 6, 'add hollo')
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Finish', 'Follow target repo state by number of commits: 6 commits', 'Follow log stopped! last commit 7/7 449f22bdf5add1e83d1a30d50afa924c23cbe5ac'],
     )
 
@@ -1411,7 +1411,7 @@ test('gitexporter followByLogFile & followByNumberOfCommits error', async () => 
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config1)
     try {
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
         expect(true).toBe(false)
     } catch (e) {
         expect(e.stderr).toEqual('ERROR: can\'t use followByLogFile=true and followByNumberOfCommits=true simultaneously. Choose one or use forceReCreateRepo=true\n')
@@ -1435,7 +1435,7 @@ test('gitexporter commitTransformer type error', async () => {
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config1)
     try {
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
         expect(true).toBe(false)
     } catch (e) {
         expect(e.stderr).toEqual('ERROR: wrong "commitTransformer" value type. Try to use path related to ignore.error-2.config.json file\n')
@@ -1459,7 +1459,7 @@ test('gitexporter commitTransformer path error', async () => {
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config1)
     try {
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
         expect(true).toBe(false)
     } catch (e) {
         expect(e.stderr).toEqual('ERROR: can\'t import "commitTransformer" module. Try to use path related to ignore.error-3.config.json file\n')
@@ -1483,9 +1483,9 @@ test('gitexporter default config.json values', async () => {
     await prepareGitRepo(`${folder}`)
     await writeFileAtomic(`${folder}.config.json`, config1)
     await writeFileAtomic(`${folder}-target.log.json`, log1)
-    await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+    await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Follow target repo state by log file: 6 commits'],
         ['Follow target repo state by number of commits', 'Remove existing repo'],
     )
@@ -1507,12 +1507,12 @@ test('gitexporter forceReCreateRepo with existing repo', async () => {
     await writeFileAtomic(`${folder}.config.json`, config1)
     await writeFileAtomic(`${folder}-target.log.json`, log1)
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Remove existing repo'],
         ['Follow target repo state by number of commits', 'Follow target repo state by log file'],
     )
     expectStdout(
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`),
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`),
         ['Remove existing repo'],
         ['Follow target repo state by number of commits', 'Follow target repo state by log file'],
     )
@@ -1560,7 +1560,7 @@ test('gitexporter target does not exists with non empty log file commits error',
     await writeFileAtomic(`${folder}.config.json`, config1)
     await writeFileAtomic(`${folder}-target.log.json`, log1)
     try {
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
         expect(true).toBe(false)
     } catch (e) {
         expect(e.stderr).toEqual('ERROR: Target repository does not exists but you already have an enable `followByLogFile` feature with existing log file commits! The behavior will be non-deterministic. You can use `forceReCreateRepo` or remove the existing log file\n')
@@ -1611,7 +1611,7 @@ test('gitexporter target repo exists with non empty log file commits error', asy
     await writeFileAtomic(`${folder}.config.json`, config1)
     await writeFileAtomic(`${folder}-target.log.json`, log1)
     try {
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
         expect(true).toBe(false)
     } catch (e) {
         expect(e.stderr).toEqual('ERROR: Target repository does not exists but you already have an enable `followByLogFile` feature with existing log file commits! The behavior will be non-deterministic. You can use `forceReCreateRepo` or remove the existing log file\n')
@@ -1637,7 +1637,7 @@ test('gitexporter target repo exists with empty log file commits error', async (
     await writeFileAtomic(`${folder}.config.json`, config1)
     await writeFileAtomic(`${folder}-target.log.json`, log1)
     try {
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
         expect(true).toBe(false)
     } catch (e) {
         expect(e.stderr).toEqual('ERROR: Your target repo already exits but your log file does not have commits! The behavior will be non-deterministic. Remove existing target repo or use `forceReCreateRepo` or change the `logFilePath`\n')
@@ -1664,7 +1664,7 @@ test('gitexporter target repo exists without follow options error', async () => 
     await writeFileAtomic(`${folder}.config.json`, config1)
     await writeFileAtomic(`${folder}-target.log.json`, log1)
     try {
-        await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
+        await run(`node --unhandled-rejections=strict src/index.js ${folder}.config.json`)
         expect(true).toBe(false)
     } catch (e) {
         expect(e.stderr).toEqual('ERROR: can\'t use followByLogFile=false and followByNumberOfCommits=false simultaneously. Choose one or use forceReCreateRepo=true\n')
