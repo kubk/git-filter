@@ -4,7 +4,8 @@
   "description": "Create a filtered copy of a git repo with full commit history preserved",
   "main": "src/index.js",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "prettier": "prettier --write src/"
   },
   "repository": "https://github.com/kubk/git-filter",
   "author": "kubk",
@@ -19,6 +20,7 @@
     "write-file-atomic": "^3.0.3"
   },
   "devDependencies": {
+    "prettier": "^3.8.1",
     "vitest": "^4.0.18"
   }
 }
