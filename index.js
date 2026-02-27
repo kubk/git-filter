@@ -2,8 +2,8 @@
 
 const fs = require('fs')
 const path = require('path')
+const { execFile } = require('child_process')
 
-const Git = require('nodegit')
 const ignore = require('ignore')
 const writeFileAtomic = require('write-file-atomic')
 
@@ -12,19 +12,44 @@ const packageJson = require(path.join(__dirname, './package.json'))
 
 let DEBUG = false
 
+function execFileAsync (cmd, args, options = {}) {
+    return new Promise((resolve, reject) => {
+        execFile(cmd, args, { maxBuffer: 100 * 1024 * 1024, ...options }, (err, stdout, stderr) => {
+            if (err) {
+                err.stderr = stderr
+                return reject(err)
+            }
+            resolve(stdout)
+        })
+    })
+}
+
+async function git (repoPath, args, options = {}) {
+    if (DEBUG) console.log('git()', '-C', repoPath, ...args)
+    return execFileAsync('git', ['-C', repoPath, ...args], options)
+}
+
+async function gitBuffer (repoPath, args) {
+    if (DEBUG) console.log('gitBuffer()', '-C', repoPath, ...args)
+    return new Promise((resolve, reject) => {
+        execFile('git', ['-C', repoPath, ...args], { maxBuffer: 100 * 1024 * 1024, encoding: 'buffer' }, (err, stdout) => {
+            if (err) return reject(err)
+            resolve(stdout)
+        })
+    })
+}
+
 async function openOrInitRepo (repoPath) {
     if (DEBUG) console.log('openOrInitRepo()', repoPath)
-    let repo
     if (!fs.existsSync(repoPath)) {
         if (DEBUG) console.log('openOrInitRepo() create repo', repoPath)
         await fs.promises.mkdir(repoPath, { recursive: true })
-        repo = await Git.Repository.init(repoPath, 0)
+        await execFileAsync('git', ['init', repoPath])
     } else {
         if (DEBUG) console.log('openOrInitRepo() open existing repo', repoPath)
-        repo = await Git.Repository.open(repoPath)
     }
     if (DEBUG) console.log('openOrInitRepo()', repoPath, 'done')
-    return repo
+    return repoPath
 }
 
 async function reWriteFilesInRepo (repoPath, files) {
@@ -46,9 +71,8 @@ async function reWriteFilesInRepo (repoPath, files) {
             // NOTE: already processed
         } else if (file.type === 3) { // file Type
             const dirPath = path.dirname(filePath)
-            const blob = await file.entry.getBlob()
-            const buffer = blob.content()
-            if (DEBUG) console.log('reWriteFilesInRepo() write:', filePath, blob.rawsize(), `mode:${file.filemode}`, JSON.stringify(blob.toString().substring(0, 90)))
+            const buffer = file.content
+            if (DEBUG) console.log('reWriteFilesInRepo() write:', filePath, buffer.length, `mode:${file.filemode}`, JSON.stringify(buffer.toString().substring(0, 90)))
             await fs.promises.mkdir(dirPath, { recursive: true })
             await writeFile(filePath, buffer, file.filemode)
         } else if (file.type === 1) { // submodule
@@ -62,52 +86,66 @@ async function reWriteFilesInRepo (repoPath, files) {
     if (DEBUG) console.log('reWriteFilesInRepo() done')
 }
 
-async function getCommitHistory (repo) {
-    if (!repo) return []
-    const history = repo.history(Git.Revwalk.SORT.REVERSE)
-    const result = []
-    return new Promise((res, rej) => {
-        history.on('commit', function (commit) {
-            result.push({
-                sha: commit.sha(),
-                author: commit.author(),
-                committer: commit.committer(),
-                date: commit.date(),
-                offset: commit.timeOffset(),
-                message: commit.message(),
-            })
-        })
+async function getCommitHistory (repoPath) {
+    if (!repoPath) return []
 
-        history.on('end', function () {
-            res(result)
-        })
+    // Check if the repo has any commits
+    try {
+        await git(repoPath, ['rev-parse', 'HEAD'])
+    } catch (e) {
+        return []
+    }
 
-        history.on('error', function (error) {
-            rej(error)
-        })
+    // Get metadata via git log (one line per commit, fields separated by NUL)
+    const output = await git(repoPath, [
+        'log', '--reverse', '--format=%H%x00%aN%x00%aE%x00%aI%x00%cN%x00%cE%x00%cI',
+    ])
+    const lines = output.trim().split('\n').filter(Boolean)
 
-        history.start()
-    })
+    const commits = []
+    for (const line of lines) {
+        const [sha, authorName, authorEmail, authorDate, committerName, committerEmail, committerDate] = line.split('\0')
+
+        // Get exact raw message via cat-file (preserves trailing newlines exactly)
+        const raw = await git(repoPath, ['cat-file', 'commit', sha])
+        const blankLineIdx = raw.indexOf('\n\n')
+        const message = raw.substring(blankLineIdx + 2)
+
+        commits.push({
+            sha,
+            author: { name: authorName, email: authorEmail },
+            authorDate,
+            committer: { name: committerName, email: committerEmail },
+            committerDate,
+            message,
+        })
+    }
+
+    return commits
 }
 
-async function commitFiles (repo, author, committer, message, files) {
+async function commitFiles (repoPath, commit, files) {
     if (DEBUG) console.log('commitFiles()', files.length)
-    const index = await repo.refreshIndex()
 
     // NOTE: we need to support rename case! if we rename from Index.js to index.js its equal to create Index.js and remove index.js
     //   And if your FS is ignore case you can create and delete the same file!
     for (const file of files) {
         if (file.type !== -1) continue
-        if (DEBUG) console.log(`commitFiles() removeByPath: ${file.path}`)
-        await index.removeByPath(file.path)
+        if (DEBUG) console.log(`commitFiles() rm --cached: ${file.path}`)
+        try {
+            await git(repoPath, ['rm', '--quiet', '--cached', file.path])
+        } catch (e) {
+            // File might not be in the index
+            if (DEBUG) console.log(`commitFiles() rm --cached failed (ok): ${e.message}`)
+        }
     }
 
     for (const file of files) {
         if (file.type === -1) { // delete file
             // NOTE: already processed
         } else if (file.type === 3) { // file Type
-            if (DEBUG) console.log(`commitFiles() addByPath: ${file.path}`)
-            await index.addByPath(file.path)
+            if (DEBUG) console.log(`commitFiles() add: ${file.path}`)
+            await git(repoPath, ['add', file.path])
         } else if (file.type === 1) { // submodule
             // TODO(pahaz): what we really should to do with submodules?
             if (DEBUG) console.log(`commitFiles() ${file.path} (skip)`)
@@ -116,69 +154,80 @@ async function commitFiles (repo, author, committer, message, files) {
         }
     }
 
-    if (DEBUG) console.log('commitFiles() index.write()')
-    await index.write()
+    // Write commit message to temp file to preserve exact content (including trailing newlines)
+    // Use absolute path because git -C changes the working directory
+    const msgFile = path.resolve(repoPath, '.git', 'COMMIT_MSG_TMP')
+    await fs.promises.writeFile(msgFile, commit.message)
 
-    if (DEBUG) console.log('commitFiles() index.writeTree()')
-    const oid = await index.writeTree()
+    if (DEBUG) console.log('commitFiles() git commit')
 
-    const parent = await repo.getHeadCommit()
-    const commitOid = await repo.createCommit('HEAD', author, committer, message, oid, (parent) ? [parent] : [])
-    if (DEBUG) console.log('commitFiles() done')
-    return commitOid.toString()
+    try {
+        const env = {
+            ...process.env,
+            GIT_AUTHOR_NAME: commit.author.name,
+            GIT_AUTHOR_EMAIL: commit.author.email,
+            GIT_AUTHOR_DATE: commit.authorDate,
+            GIT_COMMITTER_NAME: commit.committer.name,
+            GIT_COMMITTER_EMAIL: commit.committer.email,
+            GIT_COMMITTER_DATE: commit.committerDate,
+        }
+
+        await git(repoPath, ['commit', '--allow-empty', '-F', msgFile, '--cleanup=verbatim'], { env })
+    } finally {
+        await fs.promises.unlink(msgFile).catch(() => {})
+    }
+
+    const newSha = (await git(repoPath, ['rev-parse', 'HEAD'])).trim()
+    if (DEBUG) console.log('commitFiles() done', newSha)
+    return newSha
 }
 
-async function getDiffFiles (repo, hash) {
+async function getDiffFiles (repoPath, hash) {
     if (DEBUG) console.log('getDiffFiles()', hash)
 
+    const output = await git(repoPath, ['diff-tree', '-r', '--root', '--no-commit-id', '-z', hash])
+    if (!output) return []
+
     const results = []
-    const commit = await repo.getCommit(hash)
-    const tree = await commit.getTree()
+    const parts = output.split('\0').filter(Boolean)
 
-    const diffList = await commit.getDiff()
-    for (const diff of diffList) {
-        const patches = await diff.patches()
-        for (const patch of patches) {
-            const oldFile = patch.oldFile()
-            const oldFilePath = oldFile.path()
-            const oldFileMode = oldFile.mode()
-            const newFile = patch.newFile()
-            const newFilePath = newFile.path()
-            const newFileMode = newFile.mode()
-            const changeMode = newFileMode !== oldFileMode && !patch.isAdded() && !patch.isDeleted()
-            const changePath = newFilePath !== oldFilePath
-            const status = patch.status()
-            const statusString = (status === 1) ? 'C' : (status === 2) ? 'D' : (status === 3) ? 'U' : '?'
-            const mode = (patch.isAdded()) ? newFileMode : oldFileMode
-            if (changePath || DEBUG) console.log(
-                statusString, patch.size(), patch.isAdded(), patch.isModified(), patch.isDeleted(), patch.isRenamed(), patch.isCopied(), patch.isTypeChange(), patch.isConflicted(), patch.isUnreadable(), patch.isIgnored(), patch.isUntracked(), patch.isUnmodified(),
-                oldFilePath, mode, changeMode ? newFileMode : '-', changePath ? newFilePath : '-', patch.lineStats(),
-            )
+    for (let i = 0; i < parts.length; i += 2) {
+        const header = parts[i]
+        const filePath = parts[i + 1]
+        if (!header || !filePath) continue
 
-            if (status === 1) {
-                const entry = await tree.getEntry(newFilePath)
+        // header format: ":oldmode newmode oldhash newhash status"
+        const match = header.match(/:(\d+) (\d+) ([0-9a-f]+) ([0-9a-f]+) ([A-Z]\d*)/)
+        if (!match) continue
+
+        const newMode = parseInt(match[2], 8)
+        const status = match[5][0] // First char: A, D, M, T, etc.
+
+        if (status === 'A' || status === 'M' || status === 'T') {
+            const isSubmodule = match[2] === '160000'
+            if (isSubmodule) {
                 results.push({
-                    filemode: newFileMode,
-                    type: entry.type(),
-                    path: newFilePath,
-                    entry,
+                    filemode: newMode,
+                    type: 1,
+                    path: filePath,
+                    content: null,
                 })
-            } else if (status === 2) {
+            } else {
+                const content = await gitBuffer(repoPath, ['show', `${hash}:${filePath}`])
                 results.push({
-                    filemode: 0,
-                    type: -1,
-                    path: oldFilePath,
-                    entry: undefined,
-                })
-            } else if (status === 3) {
-                const entry = await tree.getEntry(newFilePath)
-                results.push({
-                    filemode: newFileMode,
-                    type: entry.type(),
-                    path: newFilePath,
-                    entry,
+                    filemode: newMode,
+                    type: 3,
+                    path: filePath,
+                    content,
                 })
             }
+        } else if (status === 'D') {
+            results.push({
+                filemode: 0,
+                type: -1,
+                path: filePath,
+                content: null,
+            })
         }
     }
 
@@ -186,51 +235,43 @@ async function getDiffFiles (repo, hash) {
     return results
 }
 
-async function getTreeFiles (repo, hash, { withSubmodules, withDirectories } = {}) {
+async function getTreeFiles (repoPath, hash) {
     if (DEBUG) console.log('getTreeFiles()', hash)
 
+    const output = await git(repoPath, ['ls-tree', '-r', '-z', hash])
+    if (!output) return []
+
     const results = []
-    const commit = await repo.getCommit(hash)
-    const tree = await commit.getTree()
+    const entries = output.split('\0').filter(Boolean)
 
-    function dfs (tree) {
-        const promises = []
+    for (const entry of entries) {
+        // Format: "mode type hash\tpath"
+        const match = entry.match(/^(\d+) (\w+) ([0-9a-f]+)\t(.+)$/)
+        if (!match) continue
 
-        for (const entry of tree.entries()) {
-            if (entry.isDirectory()) {
-                promises.push(entry.getTree().then(dfs))
-                if (DEBUG && withDirectories) console.log('getTreeFiles() dir =', entry.path())
-                if (withDirectories) results.push({
-                    filemode: entry.filemode(),
-                    type: entry.type(),
-                    path: entry.path(),
-                    entry,
-                })
-            } else if (entry.isFile()) {
-                if (DEBUG) console.log('getTreeFiles() file =', entry.path())
-                results.push({
-                    filemode: entry.filemode(), // NOTE: '-rw-r--r--' = 33188
-                    type: entry.type(),
-                    path: entry.path(),
-                    entry,
-                })
-            } else if (entry.isSubmodule()) {
-                if (DEBUG && withSubmodules) console.log('getTreeFiles() submodule =', entry.path())
-                if (withSubmodules) results.push({
-                    filemode: entry.filemode(),
-                    type: entry.type(),
-                    path: entry.path(),
-                    entry,
-                })
-            } else {
-                console.log('WTF?', entry.type())
-            }
+        const mode = parseInt(match[1], 8)
+        const objType = match[2]
+        const filePath = match[4]
+
+        if (objType === 'blob') {
+            // Only include regular files (100644) and executables (100755), not symlinks (120000).
+            // This matches nodegit's TreeEntry.isFile() which checks filemode, not type.
+            const modeOctal = match[1]
+            if (modeOctal !== '100644' && modeOctal !== '100755') continue
+
+            const content = await gitBuffer(repoPath, ['show', `${hash}:${filePath}`])
+            if (DEBUG) console.log('getTreeFiles() file =', filePath)
+            results.push({
+                filemode: mode,
+                type: 3,
+                path: filePath,
+                content,
+            })
+        } else if (objType === 'commit') {
+            // submodule - skip by default (matching original behavior)
+            if (DEBUG) console.log('getTreeFiles() submodule =', filePath)
         }
-
-        return Promise.all(promises)
     }
-
-    await dfs(tree)
 
     if (DEBUG) console.log('getTreeFiles()', hash, 'done')
     return results
@@ -251,17 +292,17 @@ async function writeFile (path, buffer, permission) {
 
 function prepareLogData (commits) {
     const result = []
-    for (const { date, sha, author, committer, message, processing } of commits) {
+    for (const { authorDate, sha, author, committer, message, processing } of commits) {
         if (!processing) break
         result.push({
-            date, sha,
+            date: authorDate, sha,
             author: {
-                name: author.name(),
-                email: author.email(),
+                name: author.name,
+                email: author.email,
             },
             committer: {
-                name: committer.name(),
-                email: committer.email(),
+                name: committer.name,
+                email: committer.email,
             },
             message: message.substring(0, 200),
             processing,
@@ -293,30 +334,32 @@ async function readLogData (logFilePath) {
     }
 }
 
-async function hasCommit (repo, hash) {
+async function hasCommit (repoPath, hash) {
     try {
-        await repo.getCommit(hash)
-        return true
+        const type = (await git(repoPath, ['cat-file', '-t', hash])).trim()
+        return type === 'commit'
     } catch (e) {
-        if (e.message.search('object not found') !== -1) return false
-        throw e
+        return false
     }
 }
 
-async function checkout (repo, hash) {
-    const ref = await Git.Reference.create(repo, 'remote/origin/noname', hash, 1, '')
-    await repo.checkoutRef(ref, {
-        checkoutStrategy: Git.Checkout.STRATEGY.FORCE,
-    })
+async function checkout (repoPath, hash) {
+    await git(repoPath, ['checkout', '--force', '--quiet', hash])
 }
 
-async function stash (repo) {
-    const sig = await Git.Signature.create('GIT EXPORTER JS', 'gitexporter@example.com', 123456789, 60)
+async function stash (repoPath) {
+    // Check if repo has any commits (stash requires at least one)
     try {
-        await Git.Stash.save(repo, sig, 'our stash', 0)
+        await git(repoPath, ['rev-parse', 'HEAD'])
     } catch (e) {
-        if (e.message.includes('there is nothing to stash') >= 0) return
-        console.error('Stash error:', e.message)
+        return
+    }
+
+    try {
+        await git(repoPath, ['stash', '--quiet'])
+    } catch (e) {
+        // Nothing to stash or other non-fatal error
+        if (DEBUG) console.log('stash():', e.message)
     }
 }
 
@@ -398,7 +441,7 @@ async function main (config, args) {
     if (options.forceReCreateRepo) {
         if (isTargetRepoExists) {
             console.log('Remove existing repo:', options.targetRepoPath)
-            await fs.promises.rmdir(options.targetRepoPath, { recursive: true, force: true })
+            await fs.promises.rm(options.targetRepoPath, { recursive: true, force: true })
         }
     } else {
         if (isFollowByLogFileFeatureEnabled && isFollowByNumberOfCommits) exit('ERROR: Config error! The behavior will be non-deterministic. You want to follow by log file and follow by number of commits! Choose one or use `forceReCreateRepo`', 5)
@@ -439,15 +482,11 @@ async function main (config, args) {
         }
     }
 
-    const targetRepo = await openOrInitRepo(options.targetRepoPath)
-    await stash(targetRepo)
+    const targetRepoPath = await openOrInitRepo(options.targetRepoPath)
+    await stash(targetRepoPath)
 
-    const sourceRepo = await Git.Repository.open(options.sourceRepoPath)
-
-    const sourceHeadCommit = await sourceRepo.getHeadCommit()
-    const commits = await getCommitHistory(sourceHeadCommit) // getHeadCommit ?
-    const targetHeadCommit = await targetRepo.getHeadCommit()
-    const targetCommits = await getCommitHistory(targetHeadCommit) // getHeadCommit ?
+    const commits = await getCommitHistory(options.sourceRepoPath)
+    const targetCommits = await getCommitHistory(targetRepoPath)
 
     if (isFollowByLogFileFeatureEnabled) {
         if (existingLogState.commits.length === 0) {
@@ -489,8 +528,8 @@ async function main (config, args) {
             if (existingCommit && existingCommit.processing) {
                 const sha = existingCommit.sha
                 const newSha = existingCommit.processing.newSha
-                const hasTargetCommit = await hasCommit(targetRepo, newSha)
-                const hasSourceCommit = await hasCommit(sourceRepo, sha)
+                const hasTargetCommit = await hasCommit(targetRepoPath, newSha)
+                const hasSourceCommit = await hasCommit(options.sourceRepoPath, sha)
                 if (hasTargetCommit && hasSourceCommit) {
                     lastFollowCommit = newSha
                     lastTargetCommit = newSha
@@ -500,14 +539,14 @@ async function main (config, args) {
                 } else {
                     isFollowByOk = false
                     if (!lastFollowCommit) exit('ERROR: Does not find any log commit! Try to use `forceReCreateRepo` mode or remove wrong log file!', 2)
-                    await checkout(targetRepo, lastFollowCommit)
+                    await checkout(targetRepoPath, lastFollowCommit)
                     if (options.syncAllFilesOnLastFollowCommit) syncTreeCommitIndex = commitIndex
                     console.log(`Follow log stopped! last commit ${commitIndex}/${commitLength} ${lastFollowCommit}`)
                 }
             } else {
                 isFollowByOk = false
                 if (!lastFollowCommit) exit('ERROR: Does not find any log commit! Try to use `forceReCreateRepo` mode or remove wrong log file!', 2)
-                await checkout(targetRepo, lastFollowCommit)
+                await checkout(targetRepoPath, lastFollowCommit)
                 if (options.syncAllFilesOnLastFollowCommit) syncTreeCommitIndex = commitIndex
                 console.log(`Follow log stopped! last commit ${commitIndex}/${commitLength} ${lastFollowCommit}`)
             }
@@ -532,7 +571,7 @@ async function main (config, args) {
             } else {
                 isFollowByOk = false
                 if (!lastFollowCommit) exit('ERROR: Does not find any log commit! Try to use `forceReCreateRepo` mode or remove target repo!', 2)
-                await checkout(targetRepo, lastFollowCommit)
+                await checkout(targetRepoPath, lastFollowCommit)
                 if (options.syncAllFilesOnLastFollowCommit) syncTreeCommitIndex = commitIndex
                 console.log(`Follow log stopped! last commit ${commitIndex}/${commitLength} ${lastFollowCommit}`)
             }
@@ -541,7 +580,7 @@ async function main (config, args) {
         pathsLength = 0
         ignoredPathsLength = 0
         allowedPathsLength = 0
-        const files = ((commitIndex === syncTreeCommitIndex) ? await getTreeFiles(sourceRepo, commit.sha) : await getDiffFiles(sourceRepo, commit.sha))
+        const files = ((commitIndex === syncTreeCommitIndex) ? await getTreeFiles(options.sourceRepoPath, commit.sha) : await getDiffFiles(options.sourceRepoPath, commit.sha))
             .filter(({ path }) => {
                 let isOk = true
                 pathsLength++
@@ -565,7 +604,7 @@ async function main (config, args) {
 
         if (commitIndex === syncTreeCommitIndex && lastFollowCommit) {
             // want to `git rm` all existing files if the config.json was changed!
-            const targetFiles = await getTreeFiles(targetRepo, lastFollowCommit)
+            const targetFiles = await getTreeFiles(targetRepoPath, lastFollowCommit)
             const sourcePaths = new Set(files.map((x) => x.path))
             targetFiles.forEach((targetFile) => {
                 if (!sourcePaths.has(targetFile.path)) {
@@ -573,7 +612,7 @@ async function main (config, args) {
                         filemode: 0,
                         type: -1,
                         path: targetFile.path,
-                        entry: undefined,
+                        content: null,
                     })
                 }
             })
@@ -582,7 +621,7 @@ async function main (config, args) {
         if (options.commitTransformer) await options.commitTransformer(commit, files)
 
         await reWriteFilesInRepo(options.targetRepoPath, files)
-        const newSha = await commitFiles(targetRepo, commit.author, commit.committer, commit.message, files)
+        const newSha = await commitFiles(targetRepoPath, commit, files)
         lastTargetCommit = newSha
 
         time1 = time2
@@ -606,7 +645,7 @@ async function main (config, args) {
 
     await writeLogData(options.logFilePath, commits, filePaths, ignoredPaths, allowedPaths, skippedPaths)
     if (lastTargetCommit) {
-        await checkout(targetRepo, lastTargetCommit)
+        await checkout(targetRepoPath, lastTargetCommit)
         console.log(`Checkout: ${lastTargetCommit}`)
     }
     if (isFollowByOk && (isFollowByLogFileFeatureEnabled || isFollowByNumberOfCommits)) console.log('Follow log stopped! last commit', commitIndex, lastFollowCommit)

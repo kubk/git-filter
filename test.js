@@ -139,12 +139,12 @@ test('prepareGitRepo()', async () => {
     await prepareGitRepo(folder)
 
     await run(`git -C ${folder} log --pretty='format:%H %aI "%an" <%ae> %cI "%cn" <%ce> %s'`, [
-        '43a8998c57a1885fb9bb4ae8342b2e8a9285f002 2005-09-07T23:13:13+00:00 "User" <user@example.com> 2010-01-01T22:05:00+00:00 "Name2" <user2@example.com> add script!',
-        'a9384415955e78b0adfd00e5fb95b99eff97138c 2005-08-07T23:13:13+00:00 "User" <user@example.com> 2010-01-01T22:04:00+00:00 "Name2" <user2@example.com> another file',
-        'dded478c4d2bf21367a88d7e9bb2b6ea18eb3c50 2005-07-07T23:13:13+00:00 "User" <user@example.com> 2010-01-01T22:03:00+00:00 "Name2" <user2@example.com> create link',
-        'ee01df4e6cc73e4210e87c94b853a96103ca02c2 2005-06-07T23:13:13+00:00 "User" <user@example.com> 2010-01-01T22:02:00+00:00 "Name2" <user2@example.com> rename file',
-        'd0dc86bea4f548db93905b71da1c6915594bfd5b 2005-05-07T23:13:13+00:00 "User" <user@example.com> 2010-01-01T22:01:00+00:00 "Name2" <user2@example.com> change initial text',
-        'c731fd997376f68806c5cbe100edc7000acb75db 2005-04-07T22:13:13+00:00 "User" <user@example.com> 2010-01-01T22:00:00+00:00 "Name2" <user2@example.com> initial commit',
+        '43a8998c57a1885fb9bb4ae8342b2e8a9285f002 2005-09-07T23:13:13Z "User" <user@example.com> 2010-01-01T22:05:00Z "Name2" <user2@example.com> add script!',
+        'a9384415955e78b0adfd00e5fb95b99eff97138c 2005-08-07T23:13:13Z "User" <user@example.com> 2010-01-01T22:04:00Z "Name2" <user2@example.com> another file',
+        'dded478c4d2bf21367a88d7e9bb2b6ea18eb3c50 2005-07-07T23:13:13Z "User" <user@example.com> 2010-01-01T22:03:00Z "Name2" <user2@example.com> create link',
+        'ee01df4e6cc73e4210e87c94b853a96103ca02c2 2005-06-07T23:13:13Z "User" <user@example.com> 2010-01-01T22:02:00Z "Name2" <user2@example.com> rename file',
+        'd0dc86bea4f548db93905b71da1c6915594bfd5b 2005-05-07T23:13:13Z "User" <user@example.com> 2010-01-01T22:01:00Z "Name2" <user2@example.com> change initial text',
+        'c731fd997376f68806c5cbe100edc7000acb75db 2005-04-07T22:13:13Z "User" <user@example.com> 2010-01-01T22:00:00Z "Name2" <user2@example.com> initial commit',
     ])
 
     await run(`git -C ${folder} log -p`, DEFAULT_PREPARE_GIT_REPO_HISTORY)
@@ -281,7 +281,7 @@ test('gitexporter ignored paths', async () => {
     await writeFileAtomic(`${folder}.config.json`, config)
     await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
 
-    await run(`ls -a ${folder}-target`, ['.', '..', '.git', 'Test.txt.link', 'bin', 'sTest.txt'])
+    await run(`ls -a ${folder}-target`, ['.', '..', '.git', 'bin', 'sTest.txt', 'Test.txt.link'])
 
     expectLogPath(
         `${folder}-target.log.json`,
