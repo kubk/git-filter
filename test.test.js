@@ -200,7 +200,7 @@ test('gitexporter allowed paths', async () => {
     await writeFileAtomic(`${folder}.config.json`, config)
     await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
 
-    await run(`ls -a ${folder}-target`, ['.', '..', '.git', 'Test.txt'])
+    await run(`ls -a ${folder}-target | LC_ALL=C sort`, ['.', '..', '.git', 'Test.txt'])
 
     expectLogPath(
         `${folder}-target.log.json`,
@@ -281,7 +281,7 @@ test('gitexporter ignored paths', async () => {
     await writeFileAtomic(`${folder}.config.json`, config)
     await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
 
-    await run(`ls -a ${folder}-target`, ['.', '..', '.git', 'bin', 'sTest.txt', 'Test.txt.link'])
+    await run(`ls -a ${folder}-target | LC_ALL=C sort`, ['.', '..', '.git', 'Test.txt.link', 'bin', 'sTest.txt'])
 
     expectLogPath(
         `${folder}-target.log.json`,
@@ -361,7 +361,7 @@ test('gitexporter ignored and allowed paths', async () => {
     await writeFileAtomic(`${folder}.config.json`, config)
     await run(`node --unhandled-rejections=strict index.js ${folder}.config.json`)
 
-    await run(`ls -a ${folder}-target`, ['.', '..', '.git', 'bin'])
+    await run(`ls -a ${folder}-target | LC_ALL=C sort`, ['.', '..', '.git', 'bin'])
 
     expectLogPath(
         `${folder}-target.log.json`,
