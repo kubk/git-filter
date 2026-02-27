@@ -1,4 +1,4 @@
-# gitexporter-lite
+# git-filter
 
 Create a filtered copy of a git repository — keeping only the files you choose, with full commit history preserved.
 
@@ -7,18 +7,18 @@ Useful when you develop in a private monorepo but want to publish parts of it as
 ## Install
 
 ```bash
-npm install -g gitexporter-lite
+npm install -g git-filter
 ```
 
 Or run directly:
 
 ```bash
-npx gitexporter-lite config.json
+npx git-filter config.json
 ```
 
 ## Usage
 
-Create a `gitexporter.config.json`:
+Create a `config.json`:
 
 ```json
 {
@@ -33,7 +33,7 @@ Create a `gitexporter.config.json`:
 Run it:
 
 ```bash
-gitexporter-lite gitexporter.config.json
+git-filter config.json
 ```
 
 A new git repo appears at `targetRepoPath` with only the matching files — every commit, author, and date intact.
