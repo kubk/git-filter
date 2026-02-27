@@ -2,7 +2,7 @@
 
 Create a filtered copy of a git repository — keeping only the files you choose, with full commit history preserved.
 
-Useful when you develop in a private monorepo but want to publish parts of it as open source.
+Useful for publishing parts of a private repository as open source.
 
 ## Install
 
