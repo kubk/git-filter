@@ -1,17 +1,17 @@
 {
-  "name": "gitexporter",
-  "version": "1.5.3",
-  "description": "Utility for exporting private git repository commits to a open source public repository",
+  "name": "gitexporter-lite",
+  "version": "2.0.0",
+  "description": "Create a filtered copy of a git repo with full commit history preserved",
   "main": "index.js",
   "scripts": {
     "test": "jest"
   },
-  "repository": "https://github.com/open-condo-software/gitexporter",
-  "author": "pahaz@doma.ai",
+  "repository": "https://github.com/kubk/gitexporter-lite",
+  "author": "kubk",
   "license": "MIT",
   "private": false,
   "bin": {
-    "gitexporter": "./index.js"
+    "gitexporter-lite": "./index.js"
   },
   "dependencies": {
     "commander": "^8.3.0",
