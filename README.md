@@ -1,6 +1,6 @@
 # git-filter
 
-Create a filtered copy of a git repository — keeping only the files you choose, with full commit history preserved.
+Create a filtered copy of a git repository - keeping only the files you choose, with full commit history preserved.
 
 Useful for publishing parts of a private repository as open source.
 
@@ -36,7 +36,12 @@ Run it:
 git-filter config.json
 ```
 
-A new git repo appears at `targetRepoPath` with only the matching files — every commit, author, and date intact.
+A new git repo appears at `targetRepoPath` with only the matching files - every commit, author, and date intact.
+
+## Used by
+
+- [MemoCard](https://github.com/kubk/memo-card) - Telegram mini app for improving memory with spaced repetition
+- [Nomad Expense](https://github.com/kubk/nomad-expense) - Family expense tracker as a Telegram mini app
 
 ## Acknowledgements
 
