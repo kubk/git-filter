@@ -190,7 +190,7 @@ function expectLogPath(path, paths, ignoredPaths, allowedPaths, skippedPaths) {
   expect(logs.skippedPaths).toEqual(skippedPaths);
 }
 
-test("gitexporter save git history", async () => {
+test("git-filter save git history", async () => {
   const folder = "ignore.save-history";
   const config = `{
   "forceReCreateRepo": true,
@@ -215,7 +215,7 @@ test("gitexporter save git history", async () => {
   await run(`git -C ${folder}-target log -p`, DEFAULT_PREPARE_GIT_REPO_HISTORY);
 });
 
-test("gitexporter allowed paths", async () => {
+test("git-filter allowed paths", async () => {
   const folder = "ignore.allowed-paths";
   const config = `{
   "forceReCreateRepo": true,
@@ -295,7 +295,7 @@ test("gitexporter allowed paths", async () => {
   ]);
 });
 
-test("gitexporter ignored paths", async () => {
+test("git-filter ignored paths", async () => {
   const folder = "ignore.ignored-paths";
   const config = `{
   "forceReCreateRepo": true,
@@ -380,7 +380,7 @@ test("gitexporter ignored paths", async () => {
   ]);
 });
 
-test("gitexporter ignored and allowed paths", async () => {
+test("git-filter ignored and allowed paths", async () => {
   const folder = "ignore.ignored-allowed-paths";
   const config = `{
   "forceReCreateRepo": true,
@@ -462,7 +462,7 @@ function expectStdout(data, contains = null, notContains = null) {
   }
 }
 
-test("gitexporter follow by logfile", async () => {
+test("git-filter follow by logfile", async () => {
   const folder = "ignore.follow-by-logfile";
   const config = `{
   "forceReCreateRepo": false,
@@ -630,7 +630,7 @@ test("gitexporter follow by logfile", async () => {
   ]);
 });
 
-test("gitexporter follow by number of commits", async () => {
+test("git-filter follow by number of commits", async () => {
   const folder = "ignore.follow-by-number-of-commits";
   const config = `{
   "forceReCreateRepo": false,
@@ -803,7 +803,7 @@ test("gitexporter follow by number of commits", async () => {
   ]);
 });
 
-test("gitexporter commitTransformer", async () => {
+test("git-filter commitTransformer", async () => {
   const folder = "ignore.commit-transformer";
   const config = `{
   "forceReCreateRepo": true,
@@ -899,7 +899,7 @@ test("gitexporter commitTransformer", async () => {
   ]);
 });
 
-test("gitexporter followByLogFile syncAllFilesOnLastFollowCommit: true", async () => {
+test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: true", async () => {
   const folder = "ignore.sync-tree-by-log-true";
   const config1 = `{
   "forceReCreateRepo": false,
@@ -1009,7 +1009,7 @@ test("gitexporter followByLogFile syncAllFilesOnLastFollowCommit: true", async (
   ]);
 });
 
-test("gitexporter followByLogFile syncAllFilesOnLastFollowCommit: true; delete on config changes!", async () => {
+test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: true; delete on config changes!", async () => {
   const folder = "ignore.sync-tree-by-log-true-delete";
   const config1 = `{
   "forceReCreateRepo": false,
@@ -1129,7 +1129,7 @@ test("gitexporter followByLogFile syncAllFilesOnLastFollowCommit: true; delete o
   ]);
 });
 
-test("gitexporter followByLogFile syncAllFilesOnLastFollowCommit: false", async () => {
+test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: false", async () => {
   const folder = "ignore.sync-tree-by-log-false";
   const config1 = `{
   "forceReCreateRepo": false,
@@ -1231,7 +1231,7 @@ test("gitexporter followByLogFile syncAllFilesOnLastFollowCommit: false", async 
   ]);
 });
 
-test("gitexporter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true", async () => {
+test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true", async () => {
   const folder = "ignore.sync-tree-by-number-true";
   const config1 = `{
   "forceReCreateRepo": false,
@@ -1343,7 +1343,7 @@ test("gitexporter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true",
   ]);
 });
 
-test("gitexporter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true; delete on config changes!", async () => {
+test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true; delete on config changes!", async () => {
   const folder = "ignore.sync-tree-by-number-true-delete";
   const config1 = `{
   "forceReCreateRepo": false,
@@ -1465,7 +1465,7 @@ test("gitexporter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true; 
   ]);
 });
 
-test("gitexporter followByNumberOfCommits syncAllFilesOnLastFollowCommit: false", async () => {
+test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: false", async () => {
   const folder = "ignore.sync-tree-by-log-false";
   const config1 = `{
   "forceReCreateRepo": false,
@@ -1567,7 +1567,7 @@ test("gitexporter followByNumberOfCommits syncAllFilesOnLastFollowCommit: false"
   ]);
 });
 
-test("gitexporter followByLogFile & followByNumberOfCommits error", async () => {
+test("git-filter followByLogFile & followByNumberOfCommits error", async () => {
   const folder = "ignore.error-1";
   const config1 = `{
   "forceReCreateRepo": false,
@@ -1597,7 +1597,7 @@ test("gitexporter followByLogFile & followByNumberOfCommits error", async () => 
   }
 });
 
-test("gitexporter commitTransformer type error", async () => {
+test("git-filter commitTransformer type error", async () => {
   const folder = "ignore.error-2";
   const config1 = `{
   "forceReCreateRepo": false,
@@ -1625,7 +1625,7 @@ test("gitexporter commitTransformer type error", async () => {
   }
 });
 
-test("gitexporter commitTransformer path error", async () => {
+test("git-filter commitTransformer path error", async () => {
   const folder = "ignore.error-3";
   const config1 = `{
   "forceReCreateRepo": false,
@@ -1653,7 +1653,7 @@ test("gitexporter commitTransformer path error", async () => {
   }
 });
 
-test("gitexporter default config.json values", async () => {
+test("git-filter default config.json values", async () => {
   const folder = "ignore.default-1";
   const config1 = `{
   "targetRepoPath": "${folder}-target",
@@ -1680,7 +1680,7 @@ test("gitexporter default config.json values", async () => {
   );
 });
 
-test("gitexporter forceReCreateRepo with existing repo", async () => {
+test("git-filter forceReCreateRepo with existing repo", async () => {
   const folder = "ignore.force-remove-repo";
   const config1 = `{
   "forceReCreateRepo": true,    
@@ -1717,7 +1717,7 @@ test("gitexporter forceReCreateRepo with existing repo", async () => {
   );
 });
 
-test("gitexporter target does not exists with non empty log file commits error", async () => {
+test("git-filter target does not exists with non empty log file commits error", async () => {
   const folder = "ignore.error-5";
   const config1 = `{
   "forceReCreateRepo": false,
@@ -1772,7 +1772,7 @@ test("gitexporter target does not exists with non empty log file commits error",
   }
 });
 
-test("gitexporter target repo exists with non empty log file commits error", async () => {
+test("git-filter target repo exists with non empty log file commits error", async () => {
   const folder = "ignore.error-6";
   const config1 = `{
   "forceReCreateRepo": false,
@@ -1827,7 +1827,7 @@ test("gitexporter target repo exists with non empty log file commits error", asy
   }
 });
 
-test("gitexporter target repo exists with empty log file commits error", async () => {
+test("git-filter target repo exists with empty log file commits error", async () => {
   const folder = "ignore.error-7";
   const config1 = `{
   "forceReCreateRepo": false,
@@ -1857,7 +1857,7 @@ test("gitexporter target repo exists with empty log file commits error", async (
   }
 });
 
-test("gitexporter target repo exists without follow options error", async () => {
+test("git-filter target repo exists without follow options error", async () => {
   const folder = "ignore.error-8";
   const config1 = `{
   "followByLogFile": false,  
