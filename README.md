@@ -42,6 +42,7 @@ A new git repo appears at `targetRepoPath` with only the matching files - every 
 
 - [MemoCard](https://github.com/kubk/memo-card) - Telegram mini app for improving memory with spaced repetition
 - [Nomad Expense](https://github.com/kubk/nomad-expense) - Family expense tracker as a Telegram mini app
+- [Just Block](https://github.com/just-block/just-block.github.io) - A Chrome extension to quickly block distracting websites
 
 ## Acknowledgements
 
