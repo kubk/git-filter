@@ -483,9 +483,9 @@ async function readOptions(config, args) {
     : options.followByLogFile || !followByNumberOfCommits;
   const allowedPaths = options.allowedPaths || ["*"];
   const ignoredPaths = options.ignoredPaths || [];
-  const commitDescriptionPrepend =
-    typeof options.commitDescriptionPrepend === "string"
-      ? options.commitDescriptionPrepend
+  const commitDescriptionAppend =
+    typeof options.commitDescriptionAppend === "string"
+      ? options.commitDescriptionAppend
       : `This commit was filtered by https://github.com/kubk/git-filter\nSome files were excluded, so this commit may appear empty or incomplete.`;
   return {
     debug,
@@ -499,7 +499,7 @@ async function readOptions(config, args) {
     logFilePath,
     allowedPaths,
     ignoredPaths,
-    commitDescriptionPrepend,
+    commitDescriptionAppend,
   };
 }
 
@@ -778,8 +778,8 @@ async function main(config, args) {
       });
     }
 
-    if (options.commitDescriptionPrepend) {
-      commit.message = options.commitDescriptionPrepend + "\n\n" + commit.message;
+    if (options.commitDescriptionAppend) {
+      commit.message = commit.message.trimEnd() + "\n\n" + options.commitDescriptionAppend + "\n";
     }
 
     await reWriteFilesInRepo(options.targetRepoPath, files);
