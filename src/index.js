@@ -446,18 +446,6 @@ async function stash(repoPath) {
   }
 }
 
-function requireResolvePaths(paths) {
-  for (const path of paths) {
-    try {
-      require(path);
-      return path;
-    } catch (error) {
-      if (DEBUG) console.warn(error);
-    }
-  }
-  return null;
-}
-
 async function readOptions(config, args) {
   const data = fs.readFileSync(config);
   const options = JSON.parse(data);
@@ -495,25 +483,10 @@ async function readOptions(config, args) {
     : options.followByLogFile || !followByNumberOfCommits;
   const allowedPaths = options.allowedPaths || ["*"];
   const ignoredPaths = options.ignoredPaths || [];
-  let commitTransformer = options.commitTransformer || null;
-  if (commitTransformer) {
-    if (typeof commitTransformer !== "string")
-      exit(
-        `ERROR: wrong "commitTransformer" value type. Try to use path related to ${config} file`,
-        8,
-      );
-    commitTransformer = requireResolvePaths([
-      commitTransformer,
-      path.join(config, "..", commitTransformer),
-      path.join(process.cwd(), commitTransformer),
-    ]);
-    if (!commitTransformer)
-      exit(
-        `ERROR: can't import "commitTransformer" module. Try to use path related to ${config} file`,
-        8,
-      );
-    commitTransformer = require(commitTransformer);
-  }
+  const commitDescriptionPrepend =
+    typeof options.commitDescriptionPrepend === "string"
+      ? options.commitDescriptionPrepend
+      : `This commit was filtered by https://github.com/kubk/git-filter\nSome files were excluded, so this commit may appear empty or incomplete.`;
   return {
     debug,
     dontShowTiming,
@@ -526,7 +499,7 @@ async function readOptions(config, args) {
     logFilePath,
     allowedPaths,
     ignoredPaths,
-    commitTransformer,
+    commitDescriptionPrepend,
   };
 }
 
@@ -805,8 +778,9 @@ async function main(config, args) {
       });
     }
 
-    if (options.commitTransformer)
-      await options.commitTransformer(commit, files);
+    if (options.commitDescriptionPrepend) {
+      commit.message = options.commitDescriptionPrepend + "\n\n" + commit.message;
+    }
 
     await reWriteFilesInRepo(options.targetRepoPath, files);
     const newSha = await commitFiles(targetRepoPath, commit, files);

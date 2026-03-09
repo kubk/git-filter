@@ -193,6 +193,7 @@ function expectLogPath(path, paths, ignoredPaths, allowedPaths, skippedPaths) {
 test("git-filter save git history", async () => {
   const folder = "ignore.save-history";
   const config = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": true,
   "targetRepoPath": "${folder}-target",
   "sourceRepoPath": "${folder}"
@@ -218,6 +219,7 @@ test("git-filter save git history", async () => {
 test("git-filter allowed paths", async () => {
   const folder = "ignore.allowed-paths";
   const config = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": true,
   "targetRepoPath": "${folder}-target",
   "sourceRepoPath": "${folder}",
@@ -298,6 +300,7 @@ test("git-filter allowed paths", async () => {
 test("git-filter ignored paths", async () => {
   const folder = "ignore.ignored-paths";
   const config = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": true,
   "targetRepoPath": "${folder}-target",
   "sourceRepoPath": "${folder}",
@@ -383,6 +386,7 @@ test("git-filter ignored paths", async () => {
 test("git-filter ignored and allowed paths", async () => {
   const folder = "ignore.ignored-allowed-paths";
   const config = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": true,
   "targetRepoPath": "${folder}-target",
   "sourceRepoPath": "${folder}",
@@ -465,6 +469,7 @@ function expectStdout(data, contains = null, notContains = null) {
 test("git-filter follow by logfile", async () => {
   const folder = "ignore.follow-by-logfile";
   const config = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "followByLogFile": true,
   "targetRepoPath": "${folder}-target",
@@ -633,6 +638,7 @@ test("git-filter follow by logfile", async () => {
 test("git-filter follow by number of commits", async () => {
   const folder = "ignore.follow-by-number-of-commits";
   const config = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "followByLogFile": false,
   "followByNumberOfCommits": true,
@@ -803,105 +809,10 @@ test("git-filter follow by number of commits", async () => {
   ]);
 });
 
-test("git-filter commitTransformer", async () => {
-  const folder = "ignore.commit-transformer";
-  const config = `{
-  "forceReCreateRepo": true,
-  "targetRepoPath": "${folder}-target",
-  "sourceRepoPath": "${folder}",
-  "commitTransformer": "./${folder}.transformer.js",
-  "allowedPaths": ["*"]
-}`;
-  const transformer = `
-    module.exports = function (commit, files) {
-        commit.message = 'XXX: ' + commit.message
-    }
-    `;
-
-  await run(`rm -rf ${folder}*`);
-  await prepareGitRepo(`${folder}`);
-  await writeFileAtomic(`${folder}.config.json`, config);
-  await writeFileAtomic(`${folder}.transformer.js`, transformer);
-  await run(
-    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
-  );
-
-  await run(`git -C ${folder}-target log -p`, [
-    "commit a5eb28f672bd8c801088c16da026d3cef8c2c5dd",
-    "Author: User <user@example.com>",
-    "Date:   Wed Sep 7 23:13:13 2005 +0000",
-    "XXX: add script!",
-    "diff --git a/bin/script.js b/bin/script.js",
-    "new file mode 100755",
-    "index 0000000..ca29b27",
-    "--- /dev/null",
-    "+++ b/bin/script.js",
-    "@@ -0,0 +1,2 @@",
-    "+#!/usr/bin/env node",
-    "+console.log(911)",
-    "commit b5d8d9a675509efabd89348aceef6cffff809a75",
-    "Author: User <user@example.com>",
-    "Date:   Sun Aug 7 23:13:13 2005 +0000",
-    "XXX: another file",
-    "diff --git a/sTest.txt b/sTest.txt",
-    "new file mode 100644",
-    "index 0000000..6dbb898",
-    "--- /dev/null",
-    "+++ b/sTest.txt",
-    "@@ -0,0 +1 @@",
-    "+Initial text",
-    "\\ No newline at end of file",
-    "commit 737d203709702b8b1670beb3e001a7511db3089c",
-    "Author: User <user@example.com>",
-    "Date:   Thu Jul 7 23:13:13 2005 +0000",
-    "XXX: create link",
-    "diff --git a/Test.txt.link b/Test.txt.link",
-    "new file mode 120000",
-    "index 0000000..d7da186",
-    "--- /dev/null",
-    "+++ b/Test.txt.link",
-    "@@ -0,0 +1 @@",
-    "+Test.txt",
-    "\\ No newline at end of file",
-    "commit 5be2808ce613d73bbcc570931dbb9b71b36c13fa",
-    "Author: User <user@example.com>",
-    "Date:   Tue Jun 7 23:13:13 2005 +0000",
-    "XXX: rename file",
-    "diff --git a/test.txt b/Test.txt",
-    "similarity index 100%",
-    "rename from test.txt",
-    "rename to Test.txt",
-    "commit bcc480d7ff93cbfab7808289bce89e8c442f801d",
-    "Author: User <user@example.com>",
-    "Date:   Sat May 7 23:13:13 2005 +0000",
-    "XXX: change initial text",
-    "diff --git a/test.txt b/test.txt",
-    "index 6dbb898..41c4a21 100644",
-    "--- a/test.txt",
-    "+++ b/test.txt",
-    "@@ -1 +1 @@",
-    "-Initial text",
-    "\\ No newline at end of file",
-    "+Changed text",
-    "\\ No newline at end of file",
-    "commit 918eea168bf7ea3d29c71ea841e4c2e64ee9e35f",
-    "Author: User <user@example.com>",
-    "Date:   Thu Apr 7 22:13:13 2005 +0000",
-    "XXX: initial commit",
-    "diff --git a/test.txt b/test.txt",
-    "new file mode 100644",
-    "index 0000000..6dbb898",
-    "--- /dev/null",
-    "+++ b/test.txt",
-    "@@ -0,0 +1 @@",
-    "+Initial text",
-    "\\ No newline at end of file",
-  ]);
-});
-
 test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: true", async () => {
   const folder = "ignore.sync-tree-by-log-true";
   const config1 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "syncAllFilesOnLastFollowCommit": true,
   "followByLogFile": true,
@@ -919,6 +830,7 @@ test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: true", async ()
   );
 
   const config2 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "syncAllFilesOnLastFollowCommit": true,
   "followByLogFile": true,
@@ -1012,6 +924,7 @@ test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: true", async ()
 test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: true; delete on config changes!", async () => {
   const folder = "ignore.sync-tree-by-log-true-delete";
   const config1 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "syncAllFilesOnLastFollowCommit": true,
   "followByLogFile": true,
@@ -1029,6 +942,7 @@ test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: true; delete on
   );
 
   const config2 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "syncAllFilesOnLastFollowCommit": true,
   "followByLogFile": true,
@@ -1132,6 +1046,7 @@ test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: true; delete on
 test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: false", async () => {
   const folder = "ignore.sync-tree-by-log-false";
   const config1 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "syncAllFilesOnLastFollowCommit": false,
   "followByLogFile": true,
@@ -1149,6 +1064,7 @@ test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: false", async (
   );
 
   const config2 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "syncAllFilesOnLastFollowCommit": false,
   "followByLogFile": true,
@@ -1234,6 +1150,7 @@ test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: false", async (
 test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true", async () => {
   const folder = "ignore.sync-tree-by-number-true";
   const config1 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "syncAllFilesOnLastFollowCommit": true,
   "followByLogFile": false,  
@@ -1252,6 +1169,7 @@ test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true", 
   );
 
   const config2 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "syncAllFilesOnLastFollowCommit": true,
   "followByLogFile": false,  
@@ -1346,6 +1264,7 @@ test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true", 
 test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true; delete on config changes!", async () => {
   const folder = "ignore.sync-tree-by-number-true-delete";
   const config1 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "syncAllFilesOnLastFollowCommit": true,
   "followByLogFile": false,  
@@ -1364,6 +1283,7 @@ test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true; d
   );
 
   const config2 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "syncAllFilesOnLastFollowCommit": true,
   "followByLogFile": false,  
@@ -1468,6 +1388,7 @@ test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true; d
 test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: false", async () => {
   const folder = "ignore.sync-tree-by-log-false";
   const config1 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "syncAllFilesOnLastFollowCommit": false,
   "followByNumberOfCommits": true,
@@ -1485,6 +1406,7 @@ test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: false",
   );
 
   const config2 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "syncAllFilesOnLastFollowCommit": false,
   "followByNumberOfCommits": true,
@@ -1570,6 +1492,7 @@ test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: false",
 test("git-filter followByLogFile & followByNumberOfCommits error", async () => {
   const folder = "ignore.error-1";
   const config1 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "syncAllFilesOnLastFollowCommit": false,
   "followByLogFile": true,  
@@ -1591,62 +1514,6 @@ test("git-filter followByLogFile & followByNumberOfCommits error", async () => {
   } catch (e) {
     expect(e.stderr).toEqual(
       "ERROR: can't use followByLogFile=true and followByNumberOfCommits=true simultaneously. Choose one or use forceReCreateRepo=true\n",
-    );
-    expect(e.code).toEqual(8);
-    expect(e.killed).toEqual(false);
-  }
-});
-
-test("git-filter commitTransformer type error", async () => {
-  const folder = "ignore.error-2";
-  const config1 = `{
-  "forceReCreateRepo": false,
-  "commitTransformer": true,  
-  "targetRepoPath": "${folder}-target",
-  "sourceRepoPath": "${folder}",
-  "ignoredPaths": ["test.txt", "*.link"],
-  "allowedPaths": ["*"]
-}`;
-
-  await run(`rm -rf ${folder}*`);
-  await prepareGitRepo(`${folder}`);
-  await writeFileAtomic(`${folder}.config.json`, config1);
-  try {
-    await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
-    );
-    expect(true).toBe(false);
-  } catch (e) {
-    expect(e.stderr).toEqual(
-      'ERROR: wrong "commitTransformer" value type. Try to use path related to ignore.error-2.config.json file\n',
-    );
-    expect(e.code).toEqual(8);
-    expect(e.killed).toEqual(false);
-  }
-});
-
-test("git-filter commitTransformer path error", async () => {
-  const folder = "ignore.error-3";
-  const config1 = `{
-  "forceReCreateRepo": false,
-  "commitTransformer": "waawfawfawfafawfawfawfawffawf",  
-  "targetRepoPath": "${folder}-target",
-  "sourceRepoPath": "${folder}",
-  "ignoredPaths": ["test.txt", "*.link"],
-  "allowedPaths": ["*"]
-}`;
-
-  await run(`rm -rf ${folder}*`);
-  await prepareGitRepo(`${folder}`);
-  await writeFileAtomic(`${folder}.config.json`, config1);
-  try {
-    await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
-    );
-    expect(true).toBe(false);
-  } catch (e) {
-    expect(e.stderr).toEqual(
-      'ERROR: can\'t import "commitTransformer" module. Try to use path related to ignore.error-3.config.json file\n',
     );
     expect(e.code).toEqual(8);
     expect(e.killed).toEqual(false);
@@ -1683,6 +1550,7 @@ test("git-filter default config.json values", async () => {
 test("git-filter forceReCreateRepo with existing repo", async () => {
   const folder = "ignore.force-remove-repo";
   const config1 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": true,    
   "targetRepoPath": "${folder}-target",
   "sourceRepoPath": "${folder}"
@@ -1720,6 +1588,7 @@ test("git-filter forceReCreateRepo with existing repo", async () => {
 test("git-filter target does not exists with non empty log file commits error", async () => {
   const folder = "ignore.error-5";
   const config1 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "targetRepoPath": "${folder}-target",
   "sourceRepoPath": "${folder}",
@@ -1775,6 +1644,7 @@ test("git-filter target does not exists with non empty log file commits error", 
 test("git-filter target repo exists with non empty log file commits error", async () => {
   const folder = "ignore.error-6";
   const config1 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "targetRepoPath": "${folder}-target",
   "sourceRepoPath": "${folder}",
@@ -1830,6 +1700,7 @@ test("git-filter target repo exists with non empty log file commits error", asyn
 test("git-filter target repo exists with empty log file commits error", async () => {
   const folder = "ignore.error-7";
   const config1 = `{
+  "commitDescriptionPrepend": "",
   "forceReCreateRepo": false,
   "targetRepoPath": "${folder}-target",
   "sourceRepoPath": "${folder}",
@@ -1855,6 +1726,55 @@ test("git-filter target repo exists with empty log file commits error", async ()
     expect(e.code).toEqual(7);
     expect(e.killed).toEqual(false);
   }
+});
+
+test("git-filter commitDescriptionPrepend default", async () => {
+  const folder = "ignore.commit-description-prepend";
+  const config = `{
+  "forceReCreateRepo": true,
+  "targetRepoPath": "${folder}-target",
+  "sourceRepoPath": "${folder}",
+  "allowedPaths": ["test.txt"]
+}`;
+  await run(`rm -rf ${folder}*`);
+  await prepareGitRepo(`${folder}`);
+  await writeFileAtomic(`${folder}.config.json`, config);
+  await run(
+    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+  );
+
+  const { stdout } = await run(`git -C ${folder}-target log --format=%B`);
+  const messages = stdout.trim();
+  expect(messages).toContain(
+    "This commit was filtered by https://github.com/kubk/git-filter",
+  );
+  expect(messages).toContain(
+    "Some files were excluded, so this commit may appear empty or incomplete.",
+  );
+  expect(messages).toContain("initial commit");
+});
+
+test("git-filter commitDescriptionPrepend custom", async () => {
+  const folder = "ignore.commit-description-prepend-custom";
+  const config = `{
+  "commitDescriptionPrepend": "Custom prepend message",
+  "forceReCreateRepo": true,
+  "targetRepoPath": "${folder}-target",
+  "sourceRepoPath": "${folder}",
+  "allowedPaths": ["test.txt"]
+}`;
+  await run(`rm -rf ${folder}*`);
+  await prepareGitRepo(`${folder}`);
+  await writeFileAtomic(`${folder}.config.json`, config);
+  await run(
+    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+  );
+
+  const { stdout } = await run(`git -C ${folder}-target log --format=%B`);
+  const messages = stdout.trim();
+  expect(messages).toContain("Custom prepend message");
+  expect(messages).toContain("initial commit");
+  expect(messages).not.toContain("https://github.com/kubk/git-filter");
 });
 
 test("git-filter target repo exists without follow options error", async () => {
