@@ -779,7 +779,22 @@ async function main(config, args) {
     }
 
     if (options.commitDescriptionAppend) {
-      commit.message = commit.message.trimEnd() + "\n\n" + options.commitDescriptionAppend + "\n";
+      // Insert before git trailers (Co-Authored-By, Signed-off-by, etc.)
+      // so GitHub still recognizes them
+      const lines = commit.message.trimEnd().split("\n");
+      let trailerStart = lines.length;
+      for (let i = lines.length - 1; i >= 0; i--) {
+        if (/^[A-Za-z-]+: .+/.test(lines[i])) {
+          trailerStart = i;
+        } else {
+          break;
+        }
+      }
+      const body = lines.slice(0, trailerStart).join("\n").trimEnd();
+      const trailers = lines.slice(trailerStart).join("\n");
+      commit.message = trailers
+        ? body + "\n\n" + options.commitDescriptionAppend + "\n\n" + trailers + "\n"
+        : body + "\n\n" + options.commitDescriptionAppend + "\n";
     }
 
     await reWriteFilesInRepo(options.targetRepoPath, files);

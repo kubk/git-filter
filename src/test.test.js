@@ -1754,6 +1754,41 @@ test("git-filter commitDescriptionAppend default", async () => {
   expect(messages).toContain("initial commit");
 });
 
+test("git-filter commitDescriptionAppend preserves trailers", async () => {
+  const folder = "ignore.commit-description-trailers";
+  await run(`rm -rf ${folder}*`);
+  await exec(`mkdir -p ${folder}`);
+  await exec(`git -C ${folder} init`);
+  await writeFileAtomic(path.join(folder, "test.txt"), "hello");
+  await exec(`git -C ${folder} add test.txt`);
+  const msgFile = path.resolve(folder, "COMMIT_MSG");
+  await writeFileAtomic(
+    msgFile,
+    "my title\n\nmy body\n\nCo-Authored-By: Someone <someone@example.com>\n",
+  );
+  await exec(
+    `git -C ${folder} -c user.name="User" -c user.email=user@example.com commit -F "${msgFile}"`,
+  );
+
+  const config = `{
+  "forceReCreateRepo": true,
+  "targetRepoPath": "${folder}-target",
+  "sourceRepoPath": "${folder}"
+}`;
+  await writeFileAtomic(`${folder}.config.json`, config);
+  await run(
+    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+  );
+
+  await run(`git -C ${folder}-target log -1 --format=%B`, [
+    "my title",
+    "my body",
+    "This commit was filtered by https://github.com/kubk/git-filter",
+    "Some files were excluded, so this commit may appear empty or incomplete.",
+    "Co-Authored-By: Someone <someone@example.com>",
+  ]);
+});
+
 test("git-filter commitDescriptionAppend custom", async () => {
   const folder = "ignore.commit-description-prepend-custom";
   const config = `{
