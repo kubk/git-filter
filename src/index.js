@@ -2,7 +2,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { execFile } = require("child_process");
+const { execFile, spawn } = require("child_process");
 
 const ignore = require("ignore");
 const writeFileAtomic = require("write-file-atomic");
@@ -46,6 +46,68 @@ async function gitBuffer(repoPath, args) {
         resolve(stdout);
       },
     );
+  });
+}
+
+async function gitBatchObjects(repoPath, hashes) {
+  if (hashes.length === 0) return [];
+  if (DEBUG)
+    console.log("gitBatchObjects()", "-C", repoPath, hashes.length, "objects");
+
+  return new Promise((resolve, reject) => {
+    const child = spawn("git", ["-C", repoPath, "cat-file", "--batch"]);
+    const stdoutChunks = [];
+    const stderrChunks = [];
+
+    child.stdout.on("data", (chunk) => stdoutChunks.push(chunk));
+    child.stderr.on("data", (chunk) => stderrChunks.push(chunk));
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code !== 0) {
+        const error = new Error(`git cat-file --batch exited with code ${code}`);
+        error.stderr = Buffer.concat(stderrChunks).toString();
+        reject(error);
+        return;
+      }
+
+      try {
+        const output = Buffer.concat(stdoutChunks);
+        const objects = [];
+        let offset = 0;
+
+        for (const expectedHash of hashes) {
+          const headerEnd = output.indexOf(0x0a, offset);
+          if (headerEnd === -1)
+            throw new Error(`Missing batch header for ${expectedHash}`);
+
+          const [hash, type, sizeText] = output
+            .subarray(offset, headerEnd)
+            .toString()
+            .split(" ");
+          const size = Number(sizeText);
+          if (!hash || !type || !Number.isSafeInteger(size))
+            throw new Error(`Invalid batch header for ${expectedHash}`);
+
+          const contentStart = headerEnd + 1;
+          const contentEnd = contentStart + size;
+          if (contentEnd >= output.length || output[contentEnd] !== 0x0a)
+            throw new Error(`Incomplete batch object for ${expectedHash}`);
+
+          objects.push({
+            hash,
+            type,
+            content: output.subarray(contentStart, contentEnd),
+          });
+          offset = contentEnd + 1;
+        }
+
+        resolve(objects);
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    child.stdin.end(`${hashes.join("\n")}\n`);
   });
 }
 
@@ -124,8 +186,7 @@ async function getCommitHistory(repoPath) {
   ]);
   const lines = output.trim().split("\n").filter(Boolean);
 
-  const commits = [];
-  for (const line of lines) {
+  const metadata = lines.map((line) => {
     const [
       sha,
       authorName,
@@ -136,22 +197,32 @@ async function getCommitHistory(repoPath) {
       committerDate,
     ] = line.split("\0");
 
-    // Get exact raw message via cat-file (preserves trailing newlines exactly)
-    const raw = await git(repoPath, ["cat-file", "commit", sha]);
-    const blankLineIdx = raw.indexOf("\n\n");
-    const message = raw.substring(blankLineIdx + 2);
-
-    commits.push({
+    return {
       sha,
       author: { name: authorName, email: authorEmail },
       authorDate,
       committer: { name: committerName, email: committerEmail },
       committerDate,
-      message,
-    });
-  }
+    };
+  });
 
-  return commits;
+  const rawCommits = await gitBatchObjects(
+    repoPath,
+    metadata.map(({ sha }) => sha),
+  );
+
+  return metadata.map((commit, index) => {
+    const rawCommit = rawCommits[index];
+    if (rawCommit.type !== "commit")
+      throw new Error(`${commit.sha} is not a commit`);
+    const blankLineIdx = rawCommit.content.indexOf("\n\n");
+    const message = rawCommit.content.subarray(blankLineIdx + 2).toString();
+
+    return {
+      ...commit,
+      message,
+    };
+  });
 }
 
 async function commitFiles(repoPath, commit, files) {
@@ -417,15 +488,6 @@ async function readLogData(logFilePath) {
   }
 }
 
-async function hasCommit(repoPath, hash) {
-  try {
-    const type = (await git(repoPath, ["cat-file", "-t", hash])).trim();
-    return type === "commit";
-  } catch (e) {
-    return false;
-  }
-}
-
 async function checkout(repoPath, hash) {
   await git(repoPath, ["checkout", "--force", "--quiet", hash]);
 }
@@ -647,7 +709,50 @@ async function main(config, args) {
     existingLogState.skippedPaths
       ? new Set(existingLogState.skippedPaths)
       : new Set();
-  for (const commit of commits) {
+
+  if (isFollowByLogFileFeatureEnabled) {
+    const targetCommitShas = new Set(targetCommits.map(({ sha }) => sha));
+    let followedCommitCount = 0;
+
+    while (
+      followedCommitCount < commits.length &&
+      followedCommitCount < existingLogState.commits.length
+    ) {
+      const commit = commits[followedCommitCount];
+      const existingCommit = existingLogState.commits[followedCommitCount];
+      const newSha = existingCommit?.processing?.newSha;
+      if (
+        commit.sha !== existingCommit?.sha ||
+        !newSha ||
+        !targetCommitShas.has(newSha)
+      )
+        break;
+
+      commit.processing = existingCommit.processing;
+      lastFollowCommit = newSha;
+      lastTargetCommit = newSha;
+      followedCommitCount++;
+    }
+
+    if (!lastFollowCommit)
+      exit(
+        "ERROR: Does not find any log commit! Try to use `forceReCreateRepo` mode or remove wrong log file!",
+        2,
+      );
+
+    commitIndex = followedCommitCount;
+    if (commitIndex < commits.length) {
+      isFollowByOk = false;
+      await checkout(targetRepoPath, lastFollowCommit);
+      if (options.syncAllFilesOnLastFollowCommit)
+        syncTreeCommitIndex = commitIndex + 1;
+      console.log(
+        `Follow log stopped! last commit ${commitIndex + 1}/${commitLength} ${lastFollowCommit}`,
+      );
+    }
+  }
+
+  for (const commit of commits.slice(commitIndex)) {
     console.log(
       `Processing: ${++commitIndex}/${commitLength}`,
       commit.sha,
@@ -655,49 +760,6 @@ async function main(config, args) {
         ? ""
         : `~${Math.round((time2 - time0) / commitIndex)}ms; ${time2 - time1}ms`,
     );
-
-    if (isFollowByOk && isFollowByLogFileFeatureEnabled) {
-      const existingCommit = existingLogState.commits[commitIndex - 1];
-      if (existingCommit && existingCommit.processing) {
-        const sha = existingCommit.sha;
-        const newSha = existingCommit.processing.newSha;
-        const hasTargetCommit = await hasCommit(targetRepoPath, newSha);
-        const hasSourceCommit = await hasCommit(options.sourceRepoPath, sha);
-        if (hasTargetCommit && hasSourceCommit) {
-          lastFollowCommit = newSha;
-          lastTargetCommit = newSha;
-          // we also need to update commit.processing data
-          commit.processing = existingCommit.processing;
-          continue;
-        } else {
-          isFollowByOk = false;
-          if (!lastFollowCommit)
-            exit(
-              "ERROR: Does not find any log commit! Try to use `forceReCreateRepo` mode or remove wrong log file!",
-              2,
-            );
-          await checkout(targetRepoPath, lastFollowCommit);
-          if (options.syncAllFilesOnLastFollowCommit)
-            syncTreeCommitIndex = commitIndex;
-          console.log(
-            `Follow log stopped! last commit ${commitIndex}/${commitLength} ${lastFollowCommit}`,
-          );
-        }
-      } else {
-        isFollowByOk = false;
-        if (!lastFollowCommit)
-          exit(
-            "ERROR: Does not find any log commit! Try to use `forceReCreateRepo` mode or remove wrong log file!",
-            2,
-          );
-        await checkout(targetRepoPath, lastFollowCommit);
-        if (options.syncAllFilesOnLastFollowCommit)
-          syncTreeCommitIndex = commitIndex;
-        console.log(
-          `Follow log stopped! last commit ${commitIndex}/${commitLength} ${lastFollowCommit}`,
-        );
-      }
-    }
 
     if (isFollowByOk && isFollowByNumberOfCommits) {
       const targetCommit = targetCommits[commitIndex - 1];

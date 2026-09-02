@@ -513,8 +513,10 @@ test("git-filter follow by logfile", async () => {
       "Finish",
       "Follow target repo state by log file: 6 commits",
       "Follow log stopped! last commit 7/7 46c01f27346ad1e77ffcc81e38b914ea17ae0395",
+      "Processing: 7/7",
       "Checkout: 95655d5bd61e5d8c71acde522f28c0d46fb17330",
     ],
+    ["Processing: 1/7", "Processing: 6/7"],
   );
   expectLogPath(
     `${folder}-target.log.json`,
