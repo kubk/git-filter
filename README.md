@@ -22,11 +22,12 @@ Create a `config.json`:
 
 ```json
 {
-  "forceReCreateRepo": true,
+  "forceReCreateRepo": false,
+  "followByLogFile": true,
   "sourceRepoPath": ".",
   "targetRepoPath": "../my-public-repo",
-  "allowedPaths": ["packages/frontend/*", "README.md"],
-  "ignoredPaths": ["packages/frontend/.env"]
+  "allowedPaths": ["frontend/*", "README.md"],
+  "ignoredPaths": ["backend/*"]
 }
 ```
 
