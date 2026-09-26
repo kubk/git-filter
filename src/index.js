@@ -174,7 +174,7 @@ async function getCommitHistory(repoPath) {
   // Check if the repo has any commits
   try {
     await git(repoPath, ["rev-parse", "HEAD"]);
-  } catch (e) {
+  } catch {
     return [];
   }
 
@@ -483,7 +483,7 @@ async function readLogData(logFilePath) {
     const data = JSON.parse(await fs.promises.readFile(logFilePath));
     if (!data.commits || !Array.isArray(data.commits)) data.commits = [];
     return data;
-  } catch (e) {
+  } catch {
     return { commits: [] };
   }
 }
@@ -496,7 +496,7 @@ async function stash(repoPath) {
   // Check if repo has any commits (stash requires at least one)
   try {
     await git(repoPath, ["rev-parse", "HEAD"]);
-  } catch (e) {
+  } catch {
     return;
   }
 
@@ -508,7 +508,7 @@ async function stash(repoPath) {
   }
 }
 
-async function readOptions(config, args) {
+async function readOptions(config) {
   const data = fs.readFileSync(config);
   const options = JSON.parse(data);
   const debug = !!options.debug || false;
@@ -570,8 +570,8 @@ function exit(message, code = 1) {
   process.exit(code);
 }
 
-async function main(config, args) {
-  const options = await readOptions(config, args);
+async function main(config) {
+  const options = await readOptions(config);
   if (options.debug) DEBUG = true;
 
   const time0 = Date.now();

@@ -520,9 +520,9 @@ test("git-filter follow by logfile", async () => {
   );
   expectLogPath(
     `${folder}-target.log.json`,
-    [...DEFAULT_PREPARE_GIT_REPO_PATHS, ...["some-file.txt"]],
+    [...DEFAULT_PREPARE_GIT_REPO_PATHS, "some-file.txt"],
     ["Test.txt.link", "sTest.txt"],
-    [...DEFAULT_PREPARE_GIT_REPO_PATHS, ...["some-file.txt"]],
+    [...DEFAULT_PREPARE_GIT_REPO_PATHS, "some-file.txt"],
     [],
   );
 
@@ -562,9 +562,9 @@ test("git-filter follow by logfile", async () => {
 
   expectLogPath(
     `${folder}-target.log.json`,
-    [...DEFAULT_PREPARE_GIT_REPO_PATHS, ...["some-file.txt"]],
+    [...DEFAULT_PREPARE_GIT_REPO_PATHS, "some-file.txt"],
     ["Test.txt.link", "sTest.txt"],
-    [...DEFAULT_PREPARE_GIT_REPO_PATHS, ...["some-file.txt"]],
+    [...DEFAULT_PREPARE_GIT_REPO_PATHS, "some-file.txt"],
     [],
   );
 
@@ -691,9 +691,9 @@ test("git-filter follow by number of commits", async () => {
   );
   expectLogPath(
     `${folder}-target.log.json`,
-    [...DEFAULT_PREPARE_GIT_REPO_PATHS, ...["some-file.txt"]],
+    [...DEFAULT_PREPARE_GIT_REPO_PATHS, "some-file.txt"],
     ["Test.txt.link", "sTest.txt"],
-    [...DEFAULT_PREPARE_GIT_REPO_PATHS, ...["some-file.txt"]],
+    [...DEFAULT_PREPARE_GIT_REPO_PATHS, "some-file.txt"],
     [],
   );
 
@@ -736,9 +736,9 @@ test("git-filter follow by number of commits", async () => {
 
   expectLogPath(
     `${folder}-target.log.json`,
-    [...DEFAULT_PREPARE_GIT_REPO_PATHS, ...["some-file.txt"]],
+    [...DEFAULT_PREPARE_GIT_REPO_PATHS, "some-file.txt"],
     ["Test.txt.link", "sTest.txt"],
-    [...DEFAULT_PREPARE_GIT_REPO_PATHS, ...["some-file.txt"]],
+    [...DEFAULT_PREPARE_GIT_REPO_PATHS, "some-file.txt"],
     [],
   );
 

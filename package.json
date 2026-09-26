@@ -6,7 +6,10 @@
   "main": "src/index.js",
   "scripts": {
     "test": "vitest run",
-    "prettier": "prettier --write src/"
+    "prettier": "prettier --write src/",
+    "lint:knip": "knip",
+    "lint:oxlint": "oxlint",
+    "lint": "pnpm run \"/^lint:.*/\""
   },
   "repository": "https://github.com/kubk/git-filter",
   "author": "kubk",
@@ -21,6 +24,8 @@
     "write-file-atomic": "^3.0.3"
   },
   "devDependencies": {
+    "knip": "^6.38.0",
+    "oxlint": "^1.85.0",
     "prettier": "^3.8.1",
     "vitest": "^4.0.18"
   }
