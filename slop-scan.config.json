@@ -1,0 +1,7 @@
+{
+  "rules": {
+    "defensive.error-obscuring": {
+      "enabled": false
+    }
+  }
+}

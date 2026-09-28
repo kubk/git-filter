@@ -8,7 +8,9 @@
     "test": "vitest run",
     "prettier": "prettier --write src/",
     "lint:knip": "knip",
-    "lint:oxlint": "oxlint",
+    "lint:jscpd": "jscpd src --min-lines 10 --min-tokens 50 --ignore '**/*.test.*' --exit-code 1 --no-colors --no-tips --reporters ai",
+    "lint:oxlint": "oxlint --format=agent",
+    "lint:slop-scan": "slop-scan scan . --lint | tee /dev/stderr | grep -q '^0 findings$'",
     "lint": "pnpm run \"/^lint:.*/\""
   },
   "repository": "https://github.com/kubk/git-filter",
@@ -24,9 +26,11 @@
     "write-file-atomic": "^3.0.3"
   },
   "devDependencies": {
+    "jscpd": "^5.3.2",
     "knip": "^6.38.0",
     "oxlint": "^1.85.0",
     "prettier": "^3.8.1",
+    "slop-scan": "^0.3.0",
     "vitest": "^4.0.18"
   }
 }
