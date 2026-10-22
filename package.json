@@ -1,6 +1,6 @@
 {
   "name": "git-filter",
-  "version": "2.4.1",
+  "version": "2.5.0",
   "packageManager": "pnpm@9.15.0",
   "description": "Create a filtered copy of a git repo with full commit history preserved",
   "type": "module",
