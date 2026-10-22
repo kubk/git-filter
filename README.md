@@ -6,6 +6,8 @@ Useful for publishing parts of a private repository as open source - for example
 
 ## Install
 
+Requires Node.js 24+.
+
 ```bash
 npm install -g git-filter
 ```

@@ -1,40 +1,93 @@
 #!/usr/bin/env node
 
-const fs = require("fs");
-const path = require("path");
-const { execFile, spawn } = require("child_process");
+import fs from "node:fs";
+import path from "node:path";
+import { execFile, spawn, type ExecFileOptions } from "node:child_process";
 
-const ignore = require("ignore");
-const writeFileAtomic = require("write-file-atomic");
+import ignore from "ignore";
+import writeFileAtomic from "write-file-atomic";
 
-const { Command } = require("commander");
-const packageJson = require(path.join(__dirname, "../package.json"));
+import { Command } from "commander";
+
+const packageJson: { version: string; description: string } = JSON.parse(
+  fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+);
+
+type Person = { name: string; email: string };
+
+type Processing = {
+  newSha?: string;
+  index: string;
+  t0?: number;
+  tX?: number;
+  dt?: number;
+  paths?: number;
+  ignoredPaths?: number;
+  allowedPaths?: number;
+};
+
+type Commit = {
+  sha: string;
+  author: Person;
+  authorDate: string;
+  committer: Person;
+  committerDate: string;
+  message: string;
+  processing?: Processing;
+};
+
+// type: 3 = file, 1 = submodule, -1 = deleted
+type FileEntry =
+  | { type: 3; filemode: number; path: string; content: Buffer }
+  | { type: 1 | -1; filemode: number; path: string; content: null };
+
+type LogCommit = {
+  date: string;
+  sha: string;
+  author: Person;
+  committer: Person;
+  message: string;
+  processing?: Processing;
+};
+
+type LogData = {
+  paths?: string[];
+  ignoredPaths?: string[];
+  allowedPaths?: string[];
+  skippedPaths?: string[];
+  commits: LogCommit[];
+};
 
 let DEBUG = false;
 
-function execFileAsync(cmd, args, options = {}) {
+function execFileAsync(
+  cmd: string,
+  args: string[],
+  options: ExecFileOptions = {},
+): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
       cmd,
       args,
-      { maxBuffer: 100 * 1024 * 1024, ...options },
+      { maxBuffer: 100 * 1024 * 1024, ...options, encoding: "utf8" },
       (err, stdout, stderr) => {
-        if (err) {
-          err.stderr = stderr;
-          return reject(err);
-        }
+        if (err) return reject(Object.assign(err, { stderr }));
         resolve(stdout);
       },
     );
   });
 }
 
-async function git(repoPath, args, options = {}) {
+async function git(
+  repoPath: string,
+  args: string[],
+  options: ExecFileOptions = {},
+) {
   if (DEBUG) console.log("git()", "-C", repoPath, ...args);
   return execFileAsync("git", ["-C", repoPath, ...args], options);
 }
 
-async function gitBuffer(repoPath, args) {
+async function gitBuffer(repoPath: string, args: string[]): Promise<Buffer> {
   if (DEBUG) console.log("gitBuffer()", "-C", repoPath, ...args);
   return new Promise((resolve, reject) => {
     execFile(
@@ -49,30 +102,38 @@ async function gitBuffer(repoPath, args) {
   });
 }
 
-async function gitBatchObjects(repoPath, hashes) {
+async function gitBatchObjects(
+  repoPath: string,
+  hashes: string[],
+): Promise<{ hash: string; type: string; content: Buffer }[]> {
   if (hashes.length === 0) return [];
   if (DEBUG)
     console.log("gitBatchObjects()", "-C", repoPath, hashes.length, "objects");
 
   return new Promise((resolve, reject) => {
     const child = spawn("git", ["-C", repoPath, "cat-file", "--batch"]);
-    const stdoutChunks = [];
-    const stderrChunks = [];
+    const stdoutChunks: Buffer[] = [];
+    const stderrChunks: Buffer[] = [];
 
     child.stdout.on("data", (chunk) => stdoutChunks.push(chunk));
     child.stderr.on("data", (chunk) => stderrChunks.push(chunk));
     child.on("error", reject);
     child.on("close", (code) => {
       if (code !== 0) {
-        const error = new Error(`git cat-file --batch exited with code ${code}`);
-        error.stderr = Buffer.concat(stderrChunks).toString();
-        reject(error);
+        const error = new Error(
+          `git cat-file --batch exited with code ${code}`,
+        );
+        reject(
+          Object.assign(error, {
+            stderr: Buffer.concat(stderrChunks).toString(),
+          }),
+        );
         return;
       }
 
       try {
         const output = Buffer.concat(stdoutChunks);
-        const objects = [];
+        const objects: { hash: string; type: string; content: Buffer }[] = [];
         let offset = 0;
 
         for (const expectedHash of hashes) {
@@ -111,7 +172,7 @@ async function gitBatchObjects(repoPath, hashes) {
   });
 }
 
-async function openOrInitRepo(repoPath) {
+async function openOrInitRepo(repoPath: string) {
   if (DEBUG) console.log("openOrInitRepo()", repoPath);
   if (!fs.existsSync(repoPath)) {
     if (DEBUG) console.log("openOrInitRepo() create repo", repoPath);
@@ -124,7 +185,7 @@ async function openOrInitRepo(repoPath) {
   return repoPath;
 }
 
-async function reWriteFilesInRepo(repoPath, files) {
+async function reWriteFilesInRepo(repoPath: string, files: FileEntry[]) {
   if (DEBUG) console.log("reWriteFilesInRepo()", files.length);
 
   // NOTE: we need to support rename case! if we rename from Index.js to index.js its equal to create Index.js and remove index.js
@@ -161,14 +222,12 @@ async function reWriteFilesInRepo(repoPath, files) {
       // NOTE: just skeep
       // TODO(pahaz): what we really should to do with submodules?
       console.log(`? git submodule: ${filePath} (skip)`);
-    } else {
-      console.log(`? WTF ? type=${file.type} path=${file.path} (skip)`);
     }
   }
   if (DEBUG) console.log("reWriteFilesInRepo() done");
 }
 
-async function getCommitHistory(repoPath) {
+async function getCommitHistory(repoPath: string): Promise<Commit[]> {
   if (!repoPath) return [];
 
   // Check if the repo has any commits
@@ -186,7 +245,7 @@ async function getCommitHistory(repoPath) {
   ]);
   const lines = output.trim().split("\n").filter(Boolean);
 
-  const metadata = lines.map((line) => {
+  const metadata = lines.map((line): Omit<Commit, "message"> => {
     const [
       sha,
       authorName,
@@ -212,7 +271,7 @@ async function getCommitHistory(repoPath) {
   );
 
   return metadata.map((commit, index) => {
-    const rawCommit = rawCommits[index];
+    const rawCommit = rawCommits[index]!;
     if (rawCommit.type !== "commit")
       throw new Error(`${commit.sha} is not a commit`);
     const blankLineIdx = rawCommit.content.indexOf("\n\n");
@@ -225,7 +284,11 @@ async function getCommitHistory(repoPath) {
   });
 }
 
-async function commitFiles(repoPath, commit, files) {
+async function commitFiles(
+  repoPath: string,
+  commit: Commit,
+  files: FileEntry[],
+) {
   if (DEBUG) console.log("commitFiles()", files.length);
 
   // NOTE: we need to support rename case! if we rename from Index.js to index.js its equal to create Index.js and remove index.js
@@ -238,7 +301,9 @@ async function commitFiles(repoPath, commit, files) {
     } catch (e) {
       // File might not be in the index
       if (DEBUG)
-        console.log(`commitFiles() rm --cached failed (ok): ${e.message}`);
+        console.log(
+          `commitFiles() rm --cached failed (ok): ${(e as Error).message}`,
+        );
     }
   }
 
@@ -254,9 +319,6 @@ async function commitFiles(repoPath, commit, files) {
       // submodule
       // TODO(pahaz): what we really should to do with submodules?
       if (DEBUG) console.log(`commitFiles() ${file.path} (skip)`);
-    } else {
-      if (DEBUG)
-        console.log(`commitFiles() type=${file.type} path=${file.path} (skip)`);
     }
   }
 
@@ -292,7 +354,10 @@ async function commitFiles(repoPath, commit, files) {
   return newSha;
 }
 
-async function getDiffFiles(repoPath, hash) {
+async function getDiffFiles(
+  repoPath: string,
+  hash: string,
+): Promise<FileEntry[]> {
   if (DEBUG) console.log("getDiffFiles()", hash);
 
   const output = await git(repoPath, [
@@ -305,7 +370,7 @@ async function getDiffFiles(repoPath, hash) {
   ]);
   if (!output) return [];
 
-  const results = [];
+  const results: FileEntry[] = [];
   const parts = output.split("\0").filter(Boolean);
 
   for (let i = 0; i < parts.length; i += 2) {
@@ -319,8 +384,8 @@ async function getDiffFiles(repoPath, hash) {
     );
     if (!match) continue;
 
-    const newMode = parseInt(match[2], 8);
-    const status = match[5][0]; // First char: A, D, M, T, etc.
+    const newMode = parseInt(match[2]!, 8);
+    const status = match[5]![0]; // First char: A, D, M, T, etc.
 
     if (status === "A" || status === "M" || status === "T") {
       const isSubmodule = match[2] === "160000";
@@ -357,13 +422,16 @@ async function getDiffFiles(repoPath, hash) {
   return results;
 }
 
-async function getTreeFiles(repoPath, hash) {
+async function getTreeFiles(
+  repoPath: string,
+  hash: string,
+): Promise<FileEntry[]> {
   if (DEBUG) console.log("getTreeFiles()", hash);
 
   const output = await git(repoPath, ["ls-tree", "-r", "-z", hash]);
   if (!output) return [];
 
-  const results = [];
+  const results: FileEntry[] = [];
   const entries = output.split("\0").filter(Boolean);
 
   for (const entry of entries) {
@@ -371,9 +439,9 @@ async function getTreeFiles(repoPath, hash) {
     const match = entry.match(/^(\d+) (\w+) ([0-9a-f]+)\t(.+)$/);
     if (!match) continue;
 
-    const mode = parseInt(match[1], 8);
+    const mode = parseInt(match[1]!, 8);
     const objType = match[2];
-    const filePath = match[4];
+    const filePath = match[4]!;
 
     if (objType === "blob") {
       // Only include regular files (100644) and executables (100755), not symlinks (120000).
@@ -402,7 +470,7 @@ async function getTreeFiles(repoPath, hash) {
   return results;
 }
 
-async function writeFile(path, buffer, permission) {
+async function writeFile(path: string, buffer: Buffer, permission: number) {
   const isDirectory = (permission & 0o170000) == 0o040000;
   const isNormalFile = (permission & 0o170000) == 0o100644;
   const isExecutable = (permission & 0o170000) == 0o100755;
@@ -425,8 +493,8 @@ async function writeFile(path, buffer, permission) {
   }
 }
 
-function prepareLogData(commits) {
-  const result = [];
+function prepareLogData(commits: Commit[]) {
+  const result: LogCommit[] = [];
   for (const {
     authorDate,
     sha,
@@ -456,12 +524,12 @@ function prepareLogData(commits) {
 }
 
 async function writeLogData(
-  logFilePath,
-  commits,
-  filePaths,
-  ignoredPaths,
-  allowedPaths,
-  skippedPaths,
+  logFilePath: string,
+  commits: Commit[],
+  filePaths: Set<string>,
+  ignoredPaths: Set<string>,
+  allowedPaths: Set<string>,
+  skippedPaths: Set<string>,
 ) {
   const processedCommits = prepareLogData(commits);
   const data = JSON.stringify(
@@ -478,9 +546,9 @@ async function writeLogData(
   await writeFileAtomic(logFilePath, data);
 }
 
-async function readLogData(logFilePath) {
+async function readLogData(logFilePath: string): Promise<LogData> {
   try {
-    const data = JSON.parse(await fs.promises.readFile(logFilePath));
+    const data = JSON.parse(await fs.promises.readFile(logFilePath, "utf8"));
     if (!data.commits || !Array.isArray(data.commits)) data.commits = [];
     return data;
   } catch {
@@ -488,11 +556,11 @@ async function readLogData(logFilePath) {
   }
 }
 
-async function checkout(repoPath, hash) {
+async function checkout(repoPath: string, hash: string) {
   await git(repoPath, ["checkout", "--force", "--quiet", hash]);
 }
 
-async function stash(repoPath) {
+async function stash(repoPath: string) {
   // Check if repo has any commits (stash requires at least one)
   try {
     await git(repoPath, ["rev-parse", "HEAD"]);
@@ -504,20 +572,20 @@ async function stash(repoPath) {
     await git(repoPath, ["stash", "--quiet"]);
   } catch (e) {
     // Nothing to stash or other non-fatal error
-    if (DEBUG) console.log("stash():", e.message);
+    if (DEBUG) console.log("stash():", (e as Error).message);
   }
 }
 
-async function readOptions(config) {
-  const data = fs.readFileSync(config);
-  const options = JSON.parse(data);
+async function readOptions(config: string) {
+  const options = JSON.parse(fs.readFileSync(config, "utf8"));
   const debug = !!options.debug || false;
   const dontShowTiming = !!options.dontShowTiming || false;
-  const targetRepoPath = options.targetRepoPath || "ignore.target";
-  const sourceRepoPath = options.sourceRepoPath || ".";
-  const logFilePath = options.logFilePath || targetRepoPath + ".log.json";
-  const forceReCreateRepo = options.forceReCreateRepo || false;
-  const syncAllFilesOnLastFollowCommit =
+  const targetRepoPath: string = options.targetRepoPath || "ignore.target";
+  const sourceRepoPath: string = options.sourceRepoPath || ".";
+  const logFilePath: string =
+    options.logFilePath || targetRepoPath + ".log.json";
+  const forceReCreateRepo: boolean = options.forceReCreateRepo || false;
+  const syncAllFilesOnLastFollowCommit: boolean =
     options.syncAllFilesOnLastFollowCommit || false;
   if (options.followByLogFile && options.followByNumberOfCommits)
     exit(
@@ -535,17 +603,17 @@ async function readOptions(config) {
       "ERROR: can't use followByLogFile=false and followByNumberOfCommits=false simultaneously. Choose one or use forceReCreateRepo=true",
       8,
     );
-  const followByNumberOfCommits = forceReCreateRepo
+  const followByNumberOfCommits: boolean = forceReCreateRepo
     ? false
     : options.followByLogFile
       ? false
       : options.followByNumberOfCommits || false;
-  const followByLogFile = forceReCreateRepo
+  const followByLogFile: boolean = forceReCreateRepo
     ? false
     : options.followByLogFile || !followByNumberOfCommits;
-  const allowedPaths = options.allowedPaths || ["*"];
-  const ignoredPaths = options.ignoredPaths || [];
-  const commitDescriptionAppend =
+  const allowedPaths: string[] = options.allowedPaths || ["*"];
+  const ignoredPaths: string[] = options.ignoredPaths || [];
+  const commitDescriptionAppend: string =
     typeof options.commitDescriptionAppend === "string"
       ? options.commitDescriptionAppend
       : `This commit was filtered by https://github.com/kubk/git-filter\nSome files were excluded, so this commit may appear empty or incomplete.`;
@@ -565,12 +633,12 @@ async function readOptions(config) {
   };
 }
 
-function exit(message, code = 1) {
+function exit(message: string, code = 1): never {
   console.error(message);
   process.exit(code);
 }
 
-async function main(config) {
+async function main(config: string) {
   const options = await readOptions(config);
   if (options.debug) DEBUG = true;
 
@@ -686,29 +754,29 @@ async function main(config) {
   let ignoredPathsLength = 0;
   let allowedPathsLength = 0;
   let isFollowByOk = true;
-  let lastFollowCommit = null;
-  let lastTargetCommit = null;
+  let lastFollowCommit: string | null = null;
+  let lastTargetCommit: string | null = null;
   let syncTreeCommitIndex = -1;
   const filePaths =
     (isFollowByLogFileFeatureEnabled || isFollowByNumberOfCommits) &&
     existingLogState.paths
       ? new Set(existingLogState.paths)
-      : new Set();
+      : new Set<string>();
   const ignoredPaths =
     (isFollowByLogFileFeatureEnabled || isFollowByNumberOfCommits) &&
     existingLogState.ignoredPaths
       ? new Set(existingLogState.ignoredPaths)
-      : new Set();
+      : new Set<string>();
   const allowedPaths =
     (isFollowByLogFileFeatureEnabled || isFollowByNumberOfCommits) &&
     existingLogState.allowedPaths
       ? new Set(existingLogState.allowedPaths)
-      : new Set();
+      : new Set<string>();
   const skippedPaths =
     (isFollowByLogFileFeatureEnabled || isFollowByNumberOfCommits) &&
     existingLogState.skippedPaths
       ? new Set(existingLogState.skippedPaths)
-      : new Set();
+      : new Set<string>();
 
   if (isFollowByLogFileFeatureEnabled) {
     const targetCommitShas = new Set(targetCommits.map(({ sha }) => sha));
@@ -718,7 +786,7 @@ async function main(config) {
       followedCommitCount < commits.length &&
       followedCommitCount < existingLogState.commits.length
     ) {
-      const commit = commits[followedCommitCount];
+      const commit = commits[followedCommitCount]!;
       const existingCommit = existingLogState.commits[followedCommitCount];
       const newSha = existingCommit?.processing?.newSha;
       if (
@@ -846,7 +914,7 @@ async function main(config) {
       const lines = commit.message.trimEnd().split("\n");
       let trailerStart = lines.length;
       for (let i = lines.length - 1; i >= 0; i--) {
-        if (/^[A-Za-z-]+: .+/.test(lines[i])) {
+        if (/^[A-Za-z-]+: .+/.test(lines[i]!)) {
           trailerStart = i;
         } else {
           break;
@@ -855,7 +923,12 @@ async function main(config) {
       const body = lines.slice(0, trailerStart).join("\n").trimEnd();
       const trailers = lines.slice(trailerStart).join("\n");
       commit.message = trailers
-        ? body + "\n\n" + options.commitDescriptionAppend + "\n\n" + trailers + "\n"
+        ? body +
+          "\n\n" +
+          options.commitDescriptionAppend +
+          "\n\n" +
+          trailers +
+          "\n"
         : body + "\n\n" + options.commitDescriptionAppend + "\n";
     }
 

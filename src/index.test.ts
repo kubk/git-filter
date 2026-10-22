@@ -1,11 +1,15 @@
-const path = require("path");
-const fs = require("fs");
-const util = require("util");
-const exec = util.promisify(require("child_process").exec);
+import path from "node:path";
+import fs from "node:fs";
+import util from "node:util";
+import childProcess from "node:child_process";
 
-const writeFileAtomic = require("write-file-atomic");
+import writeFileAtomic from "write-file-atomic";
 
-async function run(command, expectStdoutLines = null) {
+const exec = util.promisify(childProcess.exec);
+
+type ExecError = childProcess.ExecException & { stderr: string };
+
+async function run(command: string, expectStdoutLines: string[] | null = null) {
   const { stdout, stderr } = await exec(command);
   console.log("RUN:", command);
   console.log(stdout);
@@ -23,14 +27,17 @@ async function run(command, expectStdoutLines = null) {
 }
 
 async function addGitRepoCommit(
-  folder,
-  repoPath,
-  data,
-  timeIndex,
-  message,
-  { chmod = null, mode = "file" } = {},
+  folder: string,
+  repoPath: string,
+  data: string,
+  timeIndex: number,
+  message: string,
+  {
+    chmod = null,
+    mode = "file",
+  }: { chmod?: string | null; mode?: "file" | "link" } = {},
 ) {
-  const to60num = (x) =>
+  const to60num = (x: number) =>
     `${("" + ((x % 60) - (x % 10))).substring(0, 1)}${x % 10}`;
   await exec(`mkdir -p ${path.dirname(path.join(folder, repoPath))}`);
   if (mode === "file") {
@@ -53,7 +60,7 @@ async function addGitRepoCommit(
   );
 }
 
-async function prepareGitRepo(folder) {
+async function prepareGitRepo(folder: string) {
   const filename = "test.txt";
   const renamedFilename = "Test.txt";
   const text1 = "Initial text";
@@ -182,7 +189,13 @@ test("prepareGitRepo()", async () => {
   await run(`git -C ${folder} log -p`, DEFAULT_PREPARE_GIT_REPO_HISTORY);
 });
 
-function expectLogPath(path, paths, ignoredPaths, allowedPaths, skippedPaths) {
+function expectLogPath(
+  path: string,
+  paths: string[],
+  ignoredPaths: string[],
+  allowedPaths: string[],
+  skippedPaths: string[],
+) {
   const logs = JSON.parse(fs.readFileSync(path, { encoding: "utf-8" }));
   expect(logs.paths).toEqual(paths);
   expect(logs.ignoredPaths).toEqual(ignoredPaths);
@@ -202,7 +215,7 @@ test("git-filter save git history", async () => {
   await prepareGitRepo(`${folder}`);
   await writeFileAtomic(`${folder}.config.json`, config);
   await run(
-    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+    `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
   );
 
   expectLogPath(
@@ -229,7 +242,7 @@ test("git-filter allowed paths", async () => {
   await prepareGitRepo(`${folder}`);
   await writeFileAtomic(`${folder}.config.json`, config);
   await run(
-    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+    `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
   );
 
   await run(`ls -a ${folder}-target | LC_ALL=C sort`, [
@@ -311,7 +324,7 @@ test("git-filter ignored paths", async () => {
   await prepareGitRepo(`${folder}`);
   await writeFileAtomic(`${folder}.config.json`, config);
   await run(
-    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+    `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
   );
 
   await run(`ls -a ${folder}-target | LC_ALL=C sort`, [
@@ -398,7 +411,7 @@ test("git-filter ignored and allowed paths", async () => {
   await prepareGitRepo(`${folder}`);
   await writeFileAtomic(`${folder}.config.json`, config);
   await run(
-    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+    `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
   );
 
   await run(`ls -a ${folder}-target | LC_ALL=C sort`, [
@@ -452,7 +465,11 @@ test("git-filter ignored and allowed paths", async () => {
   ]);
 });
 
-function expectStdout(data, contains = null, notContains = null) {
+function expectStdout(
+  data: { stdout: string },
+  contains: string[] | null = null,
+  notContains: string[] | null = null,
+) {
   expect(data).toHaveProperty("stdout");
   if (contains && contains.length) {
     for (const c of contains) {
@@ -483,7 +500,7 @@ test("git-filter follow by logfile", async () => {
   await writeFileAtomic(`${folder}.config.json`, config);
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     ["Finish", "Checkout: 46c01f27346ad1e77ffcc81e38b914ea17ae0395"],
     ["Follow target repo state", "Follow log stopped"],
@@ -507,7 +524,7 @@ test("git-filter follow by logfile", async () => {
 
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     [
       "Finish",
@@ -528,7 +545,7 @@ test("git-filter follow by logfile", async () => {
 
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     [
       "Finish",
@@ -539,7 +556,7 @@ test("git-filter follow by logfile", async () => {
   );
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     [
       "Finish",
@@ -550,7 +567,7 @@ test("git-filter follow by logfile", async () => {
   );
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     [
       "Finish",
@@ -655,7 +672,7 @@ test("git-filter follow by number of commits", async () => {
   await writeFileAtomic(`${folder}.config.json`, config);
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     ["Finish", "Checkout: 46c01f27346ad1e77ffcc81e38b914ea17ae0395"],
     ["WARN", "Follow target repo state", "Follow log stopped"],
@@ -679,7 +696,7 @@ test("git-filter follow by number of commits", async () => {
 
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     [
       "Finish",
@@ -699,7 +716,7 @@ test("git-filter follow by number of commits", async () => {
 
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     [
       "Finish",
@@ -711,7 +728,7 @@ test("git-filter follow by number of commits", async () => {
   );
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     [
       "Finish",
@@ -723,7 +740,7 @@ test("git-filter follow by number of commits", async () => {
   );
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     [
       "Finish",
@@ -828,7 +845,7 @@ test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: true", async ()
   await prepareGitRepo(`${folder}`);
   await writeFileAtomic(`${folder}.config.json`, config1);
   await run(
-    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+    `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
   );
 
   const config2 = `{
@@ -850,7 +867,7 @@ test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: true", async ()
   );
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     [
       "Finish",
@@ -940,7 +957,7 @@ test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: true; delete on
   await prepareGitRepo(`${folder}`);
   await writeFileAtomic(`${folder}.config.json`, config1);
   await run(
-    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+    `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
   );
 
   const config2 = `{
@@ -963,7 +980,7 @@ test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: true; delete on
   );
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     [
       "Finish",
@@ -1062,7 +1079,7 @@ test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: false", async (
   await prepareGitRepo(`${folder}`);
   await writeFileAtomic(`${folder}.config.json`, config1);
   await run(
-    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+    `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
   );
 
   const config2 = `{
@@ -1084,7 +1101,7 @@ test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: false", async (
   );
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     [
       "Finish",
@@ -1167,7 +1184,7 @@ test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true", 
   await prepareGitRepo(`${folder}`);
   await writeFileAtomic(`${folder}.config.json`, config1);
   await run(
-    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+    `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
   );
 
   const config2 = `{
@@ -1190,7 +1207,7 @@ test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true", 
   );
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     [
       "Finish",
@@ -1281,7 +1298,7 @@ test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true; d
   await prepareGitRepo(`${folder}`);
   await writeFileAtomic(`${folder}.config.json`, config1);
   await run(
-    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+    `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
   );
 
   const config2 = `{
@@ -1305,7 +1322,7 @@ test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true; d
   );
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     [
       "Finish",
@@ -1404,7 +1421,7 @@ test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: false",
   await prepareGitRepo(`${folder}`);
   await writeFileAtomic(`${folder}.config.json`, config1);
   await run(
-    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+    `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
   );
 
   const config2 = `{
@@ -1426,7 +1443,7 @@ test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: false",
   );
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     [
       "Finish",
@@ -1510,10 +1527,11 @@ test("git-filter followByLogFile & followByNumberOfCommits error", async () => {
   await writeFileAtomic(`${folder}.config.json`, config1);
   try {
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     );
     expect(true).toBe(false);
-  } catch (e) {
+  } catch (error) {
+    const e = error as ExecError;
     expect(e.stderr).toEqual(
       "ERROR: can't use followByLogFile=true and followByNumberOfCommits=true simultaneously. Choose one or use forceReCreateRepo=true\n",
     );
@@ -1538,11 +1556,11 @@ test("git-filter default config.json values", async () => {
   await writeFileAtomic(`${folder}.config.json`, config1);
   await writeFileAtomic(`${folder}-target.log.json`, log1);
   await run(
-    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+    `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
   );
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     ["Follow target repo state by log file: 6 commits"],
     ["Follow target repo state by number of commits", "Remove existing repo"],
@@ -1567,7 +1585,7 @@ test("git-filter forceReCreateRepo with existing repo", async () => {
   await writeFileAtomic(`${folder}-target.log.json`, log1);
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     ["Remove existing repo"],
     [
@@ -1577,7 +1595,7 @@ test("git-filter forceReCreateRepo with existing repo", async () => {
   );
   expectStdout(
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     ),
     ["Remove existing repo"],
     [
@@ -1631,10 +1649,11 @@ test("git-filter target does not exists with non empty log file commits error", 
   await writeFileAtomic(`${folder}-target.log.json`, log1);
   try {
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     );
     expect(true).toBe(false);
-  } catch (e) {
+  } catch (error) {
+    const e = error as ExecError;
     expect(e.stderr).toEqual(
       "ERROR: Target repository does not exists but you already have an enable `followByLogFile` feature with existing log file commits! The behavior will be non-deterministic. You can use `forceReCreateRepo` or remove the existing log file\n",
     );
@@ -1687,10 +1706,11 @@ test("git-filter target repo exists with non empty log file commits error", asyn
   await writeFileAtomic(`${folder}-target.log.json`, log1);
   try {
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     );
     expect(true).toBe(false);
-  } catch (e) {
+  } catch (error) {
+    const e = error as ExecError;
     expect(e.stderr).toEqual(
       "ERROR: Target repository does not exists but you already have an enable `followByLogFile` feature with existing log file commits! The behavior will be non-deterministic. You can use `forceReCreateRepo` or remove the existing log file\n",
     );
@@ -1718,10 +1738,11 @@ test("git-filter target repo exists with empty log file commits error", async ()
   await writeFileAtomic(`${folder}-target.log.json`, log1);
   try {
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     );
     expect(true).toBe(false);
-  } catch (e) {
+  } catch (error) {
+    const e = error as ExecError;
     expect(e.stderr).toEqual(
       "ERROR: Your target repo already exits but your log file does not have commits! The behavior will be non-deterministic. Remove existing target repo or use `forceReCreateRepo` or change the `logFilePath`\n",
     );
@@ -1742,7 +1763,7 @@ test("git-filter commitDescriptionAppend default", async () => {
   await prepareGitRepo(`${folder}`);
   await writeFileAtomic(`${folder}.config.json`, config);
   await run(
-    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+    `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
   );
 
   const { stdout } = await run(`git -C ${folder}-target log --format=%B`);
@@ -1779,7 +1800,7 @@ test("git-filter commitDescriptionAppend preserves trailers", async () => {
 }`;
   await writeFileAtomic(`${folder}.config.json`, config);
   await run(
-    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+    `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
   );
 
   await run(`git -C ${folder}-target log -1 --format=%B`, [
@@ -1804,7 +1825,7 @@ test("git-filter commitDescriptionAppend custom", async () => {
   await prepareGitRepo(`${folder}`);
   await writeFileAtomic(`${folder}.config.json`, config);
   await run(
-    `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+    `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
   );
 
   const { stdout } = await run(`git -C ${folder}-target log --format=%B`);
@@ -1833,10 +1854,11 @@ test("git-filter target repo exists without follow options error", async () => {
   await writeFileAtomic(`${folder}-target.log.json`, log1);
   try {
     await run(
-      `node --unhandled-rejections=strict src/index.js ${folder}.config.json`,
+      `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
     );
     expect(true).toBe(false);
-  } catch (e) {
+  } catch (error) {
+    const e = error as ExecError;
     expect(e.stderr).toEqual(
       "ERROR: can't use followByLogFile=false and followByNumberOfCommits=false simultaneously. Choose one or use forceReCreateRepo=true\n",
     );
