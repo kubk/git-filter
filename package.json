@@ -16,12 +16,15 @@
     "lint:slop-scan": "slop-scan scan . --lint | tee /dev/stderr | grep -q '^0 findings$'",
     "lint": "pnpm run \"/^lint:.*/\""
   },
-  "repository": "https://github.com/kubk/git-filter",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kubk/git-filter.git"
+  },
   "author": "kubk",
   "license": "MIT",
   "private": false,
   "bin": {
-    "git-filter": "./dist/index.js"
+    "git-filter": "dist/index.js"
   },
   "dependencies": {
     "commander": "^8.3.0",
