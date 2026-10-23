@@ -13,7 +13,7 @@
     "lint:knip": "knip",
     "lint:jscpd": "jscpd src --min-lines 10 --min-tokens 50 --ignore '**/*.test.*' --exit-code 1 --no-colors --no-tips --reporters ai",
     "lint:oxlint": "oxlint --format=agent",
-    "lint:slop-scan": "slop-scan scan . --lint | tee /dev/stderr | grep -q '^0 findings$'",
+    "lint:slop-police": "slop-police",
     "lint": "pnpm run \"/^lint:.*/\""
   },
   "repository": {
@@ -38,7 +38,7 @@
     "knip": "^6.38.0",
     "oxlint": "^1.85.0",
     "prettier": "^3.8.1",
-    "slop-scan": "^0.3.0",
+    "slop-police": "^0.2.1",
     "typescript": "^7.0.2",
     "vitest": "^4.0.18"
   },

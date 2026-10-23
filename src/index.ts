@@ -346,7 +346,7 @@ async function commitFiles(
       { env },
     );
   } finally {
-    await fs.promises.unlink(msgFile).catch(() => {});
+    await fs.promises.rm(msgFile, { force: true });
   }
 
   const newSha = (await git(repoPath, ["rev-parse", "HEAD"])).trim();
