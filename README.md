@@ -41,6 +41,24 @@ git-filter config.json
 
 A new git repo appears at `targetRepoPath` with only the matching files - every commit, author, and date intact.
 
+## Push to a remote
+
+Set `targetRemote` to push the result after the export, for example from CI:
+
+```json
+{
+  "forceReCreateRepo": true,
+  "targetRepoPath": "../my-public-repo",
+  "targetRemote": "git@github.com:me/my-public-repo.git",
+  "targetBranch": "main",
+  "allowedPaths": ["frontend/*", "README.md"]
+}
+```
+
+`targetBranch` defaults to `main`. The push is forced, because changing `allowedPaths` or `ignoredPaths` rewrites the filtered history. A local `targetRemote` path is resolved relative to `targetRepoPath`.
+
+With `forceReCreateRepo` the filtered history is the same on every run, so CI needs no saved state. Check out the full history (`fetch-depth: 0` with `actions/checkout`).
+
 ## Used by
 
 - [MemoCard](https://github.com/kubk/memo-card) - Telegram mini app for improving memory with spaced repetition

@@ -582,6 +582,8 @@ async function readOptions(config: string) {
   const dontShowTiming = !!options.dontShowTiming || false;
   const targetRepoPath: string = options.targetRepoPath || "ignore.target";
   const sourceRepoPath: string = options.sourceRepoPath || ".";
+  const targetRemote: string | null = options.targetRemote || null;
+  const targetBranch: string = options.targetBranch || "main";
   const logFilePath: string =
     options.logFilePath || targetRepoPath + ".log.json";
   const forceReCreateRepo: boolean = options.forceReCreateRepo || false;
@@ -626,6 +628,8 @@ async function readOptions(config: string) {
     syncAllFilesOnLastFollowCommit,
     targetRepoPath,
     sourceRepoPath,
+    targetRemote,
+    targetBranch,
     logFilePath,
     allowedPaths,
     ignoredPaths,
@@ -973,6 +977,17 @@ async function main(config: string) {
   if (lastTargetCommit) {
     await checkout(targetRepoPath, lastTargetCommit);
     console.log(`Checkout: ${lastTargetCommit}`);
+  }
+  if (options.targetRemote) {
+    // Force, because changing allowed or ignored paths rewrites the history
+    await git(targetRepoPath, [
+      "push",
+      "--force",
+      "--quiet",
+      options.targetRemote,
+      `HEAD:refs/heads/${options.targetBranch}`,
+    ]);
+    console.log(`Push: ${options.targetRemote} ${options.targetBranch}`);
   }
   if (
     isFollowByOk &&

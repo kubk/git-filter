@@ -1605,6 +1605,40 @@ test("git-filter forceReCreateRepo with existing repo", async () => {
   );
 });
 
+test("git-filter targetRemote pushes to the remote branch", async () => {
+  const folder = "ignore.target-remote";
+  const config = `{
+  "forceReCreateRepo": true,
+  "targetRepoPath": "${folder}-target",
+  "sourceRepoPath": "${folder}",
+  "targetRemote": "../${folder}-remote",
+  "targetBranch": "public",
+  "allowedPaths": ["test.txt"]
+}`;
+  await run(`rm -rf ${folder}*`);
+  await prepareGitRepo(`${folder}`);
+  await run(`git init --quiet --bare ${folder}-remote`);
+  await writeFileAtomic(`${folder}.config.json`, config);
+  // Run twice: the second export recreates the same history and pushes again
+  for (let i = 0; i < 2; i++) {
+    expectStdout(
+      await run(
+        `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
+      ),
+      [`Push: ../${folder}-remote public`],
+      [],
+    );
+  }
+
+  const { stdout: targetHead } = await run(
+    `git -C ${folder}-target rev-parse HEAD`,
+  );
+  const { stdout: remoteHead } = await run(
+    `git -C ${folder}-remote rev-parse public`,
+  );
+  expect(remoteHead).toBe(targetHead);
+});
+
 test("git-filter target does not exists with non empty log file commits error", async () => {
   const folder = "ignore.error-5";
   const config1 = `{
