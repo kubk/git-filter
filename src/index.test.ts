@@ -171,7 +171,7 @@ const DEFAULT_PREPARE_GIT_REPO_HISTORY = [
 ];
 
 test("prepareGitRepo()", async () => {
-  const folder = "ignore.prepare-git-repo";
+  const folder = "fixtures/prepare-git-repo";
   await prepareGitRepo(folder);
 
   await run(
@@ -204,7 +204,7 @@ function expectLogPath(
 }
 
 test("git-filter save git history", async () => {
-  const folder = "ignore.save-history";
+  const folder = "fixtures/save-history";
   const config = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": true,
@@ -230,7 +230,7 @@ test("git-filter save git history", async () => {
 });
 
 test("git-filter allowed paths", async () => {
-  const folder = "ignore.allowed-paths";
+  const folder = "fixtures/allowed-paths";
   const config = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": true,
@@ -311,7 +311,7 @@ test("git-filter allowed paths", async () => {
 });
 
 test("git-filter ignored paths", async () => {
-  const folder = "ignore.ignored-paths";
+  const folder = "fixtures/ignored-paths";
   const config = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": true,
@@ -397,7 +397,7 @@ test("git-filter ignored paths", async () => {
 });
 
 test("git-filter ignored and allowed paths", async () => {
-  const folder = "ignore.ignored-allowed-paths";
+  const folder = "fixtures/ignored-allowed-paths";
   const config = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": true,
@@ -484,7 +484,7 @@ function expectStdout(
 }
 
 test("git-filter follow by logfile", async () => {
-  const folder = "ignore.follow-by-logfile";
+  const folder = "fixtures/follow-by-logfile";
   const config = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": false,
@@ -655,7 +655,7 @@ test("git-filter follow by logfile", async () => {
 });
 
 test("git-filter follow by number of commits", async () => {
-  const folder = "ignore.follow-by-number-of-commits";
+  const folder = "fixtures/follow-by-number-of-commits";
   const config = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": false,
@@ -829,7 +829,7 @@ test("git-filter follow by number of commits", async () => {
 });
 
 test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: true", async () => {
-  const folder = "ignore.sync-tree-by-log-true";
+  const folder = "fixtures/sync-tree-by-log-true";
   const config1 = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": false,
@@ -941,7 +941,7 @@ test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: true", async ()
 });
 
 test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: true; delete on config changes!", async () => {
-  const folder = "ignore.sync-tree-by-log-true-delete";
+  const folder = "fixtures/sync-tree-by-log-true-delete";
   const config1 = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": false,
@@ -1063,7 +1063,7 @@ test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: true; delete on
 });
 
 test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: false", async () => {
-  const folder = "ignore.sync-tree-by-log-false";
+  const folder = "fixtures/sync-tree-by-log-false";
   const config1 = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": false,
@@ -1167,7 +1167,7 @@ test("git-filter followByLogFile syncAllFilesOnLastFollowCommit: false", async (
 });
 
 test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true", async () => {
-  const folder = "ignore.sync-tree-by-number-true";
+  const folder = "fixtures/sync-tree-by-number-true";
   const config1 = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": false,
@@ -1281,7 +1281,7 @@ test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true", 
 });
 
 test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true; delete on config changes!", async () => {
-  const folder = "ignore.sync-tree-by-number-true-delete";
+  const folder = "fixtures/sync-tree-by-number-true-delete";
   const config1 = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": false,
@@ -1405,7 +1405,7 @@ test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: true; d
 });
 
 test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: false", async () => {
-  const folder = "ignore.sync-tree-by-log-false";
+  const folder = "fixtures/sync-tree-by-log-false";
   const config1 = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": false,
@@ -1509,7 +1509,7 @@ test("git-filter followByNumberOfCommits syncAllFilesOnLastFollowCommit: false",
 });
 
 test("git-filter followByLogFile & followByNumberOfCommits error", async () => {
-  const folder = "ignore.error-1";
+  const folder = "fixtures/error-1";
   const config1 = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": false,
@@ -1541,7 +1541,7 @@ test("git-filter followByLogFile & followByNumberOfCommits error", async () => {
 });
 
 test("git-filter default config.json values", async () => {
-  const folder = "ignore.default-1";
+  const folder = "fixtures/default-1";
   const config1 = `{
   "targetRepoPath": "${folder}-target",
   "sourceRepoPath": "${folder}",
@@ -1568,7 +1568,7 @@ test("git-filter default config.json values", async () => {
 });
 
 test("git-filter forceReCreateRepo with existing repo", async () => {
-  const folder = "ignore.force-remove-repo";
+  const folder = "fixtures/force-remove-repo";
   const config1 = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": true,    
@@ -1606,12 +1606,12 @@ test("git-filter forceReCreateRepo with existing repo", async () => {
 });
 
 test("git-filter targetRemote pushes to the remote branch", async () => {
-  const folder = "ignore.target-remote";
+  const folder = "fixtures/target-remote";
   const config = `{
   "forceReCreateRepo": true,
   "targetRepoPath": "${folder}-target",
   "sourceRepoPath": "${folder}",
-  "targetRemote": "../${folder}-remote",
+  "targetRemote": "../${path.basename(folder)}-remote",
   "targetBranch": "public",
   "allowedPaths": ["test.txt"]
 }`;
@@ -1625,7 +1625,7 @@ test("git-filter targetRemote pushes to the remote branch", async () => {
       await run(
         `node --unhandled-rejections=strict dist/index.js ${folder}.config.json`,
       ),
-      [`Push: ../${folder}-remote public`],
+      [`Push: ../${path.basename(folder)}-remote public`],
       [],
     );
   }
@@ -1640,7 +1640,7 @@ test("git-filter targetRemote pushes to the remote branch", async () => {
 });
 
 test("git-filter target does not exists with non empty log file commits error", async () => {
-  const folder = "ignore.error-5";
+  const folder = "fixtures/error-5";
   const config1 = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": false,
@@ -1697,7 +1697,7 @@ test("git-filter target does not exists with non empty log file commits error", 
 });
 
 test("git-filter target repo exists with non empty log file commits error", async () => {
-  const folder = "ignore.error-6";
+  const folder = "fixtures/error-6";
   const config1 = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": false,
@@ -1754,7 +1754,7 @@ test("git-filter target repo exists with non empty log file commits error", asyn
 });
 
 test("git-filter target repo exists with empty log file commits error", async () => {
-  const folder = "ignore.error-7";
+  const folder = "fixtures/error-7";
   const config1 = `{
   "commitDescriptionAppend": "",
   "forceReCreateRepo": false,
@@ -1786,7 +1786,7 @@ test("git-filter target repo exists with empty log file commits error", async ()
 });
 
 test("git-filter commitDescriptionAppend default", async () => {
-  const folder = "ignore.commit-description-prepend";
+  const folder = "fixtures/commit-description-prepend";
   const config = `{
   "forceReCreateRepo": true,
   "targetRepoPath": "${folder}-target",
@@ -1812,7 +1812,7 @@ test("git-filter commitDescriptionAppend default", async () => {
 });
 
 test("git-filter commitDescriptionAppend preserves trailers", async () => {
-  const folder = "ignore.commit-description-trailers";
+  const folder = "fixtures/commit-description-trailers";
   await run(`rm -rf ${folder}*`);
   await exec(`mkdir -p ${folder}`);
   await exec(`git -C ${folder} init`);
@@ -1847,7 +1847,7 @@ test("git-filter commitDescriptionAppend preserves trailers", async () => {
 });
 
 test("git-filter commitDescriptionAppend custom", async () => {
-  const folder = "ignore.commit-description-prepend-custom";
+  const folder = "fixtures/commit-description-prepend-custom";
   const config = `{
   "commitDescriptionAppend": "Custom prepend message",
   "forceReCreateRepo": true,
@@ -1870,7 +1870,7 @@ test("git-filter commitDescriptionAppend custom", async () => {
 });
 
 test("git-filter target repo exists without follow options error", async () => {
-  const folder = "ignore.error-8";
+  const folder = "fixtures/error-8";
   const config1 = `{
   "followByLogFile": false,  
   "followByNumberOfCommits": false,
