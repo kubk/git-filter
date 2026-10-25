@@ -10,7 +10,6 @@
     "prepublishOnly": "pnpm build",
     "test": "vitest run",
     "prettier": "prettier --write src/ vitest.config.ts",
-    "lint:knip": "knip",
     "lint:oxlint": "oxlint --format=agent",
     "lint:slop-police": "slop-police",
     "lint": "pnpm run \"/^lint:.*/\""
@@ -33,10 +32,9 @@
   "devDependencies": {
     "@types/node": "24",
     "@types/write-file-atomic": "3",
-    "knip": "^6.38.0",
     "oxlint": "^1.85.0",
     "prettier": "^3.8.1",
-    "slop-police": "^0.3.5",
+    "slop-police": "^0.3.9",
     "typescript": "^7.0.2",
     "vitest": "^4.0.18"
   },
