@@ -36,7 +36,7 @@
     "knip": "^6.38.0",
     "oxlint": "^1.85.0",
     "prettier": "^3.8.1",
-    "slop-police": "^0.3.3",
+    "slop-police": "^0.3.5",
     "typescript": "^7.0.2",
     "vitest": "^4.0.18"
   },
