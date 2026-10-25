@@ -9,8 +9,8 @@
     "no-redundant-value-alias": "error",
     "no-pass-through-wrapper": "error",
     "no-duplicate-function": "error",
+    "no-duplicate-code": ["error", { "minLines": 11 }],
     "no-placeholder-comment": "error",
-    "no-promise-default-fallback": "error",
     "no-stringified-unknown-error": "error"
   }
 }
