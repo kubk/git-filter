@@ -1,12 +1,5 @@
 {
   "projects": ["tsconfig.json"],
   "testFiles": ["**/*.test.ts"],
-  "rules": {
-    "unused-exports": [
-      "error",
-      {
-        "entry": ["src/index.ts", "vitest.config.ts", "vitest.global-setup.ts"]
-      }
-    ]
-  }
+  "entry": ["src/index.ts", "vitest.config.ts", "vitest.global-setup.ts"]
 }
